@@ -13,6 +13,7 @@ public:
   
 private:
 
+  
   void do_read_from_client()
   {
     asio::async_read(socket_, asio::buffer(temp_player_action_msg_.data(), read_msg_len_),
@@ -31,9 +32,10 @@ private:
                      });
   }
 
-  void write_to_client()
+  void write_to_client(game_state gs)
   {
     bool write_in_progress = !outgoing_message_queue_.empty();
+    outgoing_message_queue_.push(game_state_message(gs));
     if (!write_in_progress)
       {
         do_write_to_client();
@@ -42,7 +44,22 @@ private:
 
   void do_write_to_client()
   {
-    
+      asio::async_write(socket_, asio::buffer(outgoing_message_queue_.front().data(), write_msg_len_),
+                      [this] (const asio::error_code& ec, std::size_t /* bytes_transferred */)
+                      {
+                        if (!ec)
+                          {
+                            outgoing_message_queue_.pop();
+                            if (!outgoing_message_queue_.empty())
+                              {
+                                do_write_to_server();
+                              }
+                          }
+                        else
+                          {
+                            do_disconnect_from_client();
+                          }
+                      });
   }
   
 
@@ -61,6 +78,9 @@ private:
   // How many bytes to read from a client.
   size_t read_msg_len_ = sizeof(owned_player_move_message);
 
+  // How many bytes to write to a client.
+  size_t write_msg_len_ = sizeof(game_state);
+  
   // Nevermind this; since we only run io context from one thread, callback handlers cannot run concurrently.
   // ---
   // The server's incoming message queue must be thread safe,
@@ -75,5 +95,5 @@ private:
   std::queue<owned_player_action>& incoming_message_queue_;
 
   // The queue where the server puts the messages that are to be sent to the connected client.
-  std::queue<game_state> outgoing_message_queue_;
+  std::queue<game_state_message> outgoing_message_queue_;
 };
