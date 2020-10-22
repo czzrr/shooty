@@ -1,0 +1,11 @@
+chat_client*
+chat_server*
+chat_message*
+
+# Executable
+
+*.out
+
+# Emacs
+*~
+\#*\#

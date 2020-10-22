@@ -1,8 +1,0 @@
-#ifndef PLAYER_MOVE_H
-#define PLAYER_MOVE_H
-
-enum class player_move : uint8_t { up, down, left, right, rotate_left, rotate_right, fire_bullet }
-                                  
-
-
-#endif
