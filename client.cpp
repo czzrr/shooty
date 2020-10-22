@@ -47,6 +47,8 @@ player_action get_player_action(char action)
   case 'f':
     return player_action::fire_bullet;
   }
+
+  return player_action::up;
 }
 
 std::string get_player_action_str(player_action action)
@@ -67,6 +69,8 @@ std::string get_player_action_str(player_action action)
   case player_action::fire_bullet:
     return "fire_bullet";
   }
+
+  return "up";
 }
 
 class client
@@ -101,13 +105,14 @@ private:
 
   void do_read_from_server()
   {
-    asio::async_read(socket_, asio::buffer(buffer_), read_msg_len,
+    asio::async_read(socket_, asio::buffer(buffer_, read_msg_len),
                      [this] (const asio::error_code& ec, std::size_t /* bytes_transferred */)
                      {
                        if (!ec)
                          {
                            std::memcpy(&game_state_, buffer_.data(), read_msg_len);
-                           draw_game_state();
+                           incoming_message_queue_.push(game_state_);
+                           //draw_game_state();
                            do_read_from_server();
                          }
                        else
@@ -162,12 +167,20 @@ private:
   std::vector<uint8_t> buffer_;
   asio::io_context& io_context_;
   asio::ip::tcp::socket socket_;
+
+  std::queue<game_state> incoming_message_queue_;
   std::queue<player_action_message> outgoing_message_queue_;
   game_state game_state_;
 };
   
 int main() {
 
+  asio::io_context io_context;
+  asio::ip::tcp::resolver resolver(io_context);
+  asio::ip::tcp::resolver::results_type endpoints = resolver.resolve("127.0.0.1", "60000");
+
+  client(io_context, endpoints);
+  
   char action_c;
   while (true) {
     std::cin.get(action_c);
