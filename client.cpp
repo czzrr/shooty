@@ -5,39 +5,15 @@
 
 #include "player.hpp"
 #include "game.hpp"
-
-
-player_action get_player_action(char action)
-{
-  switch (action) {
-  case 'w':
-    return player_action::up;
-  case 'a':
-    return player_action::left;
-  case 's':
-    return player_action::down;
-  case 'd':
-    return player_action::right;
-  case 'l':
-    return player_action::rotate_left;
-  case 'r':
-    return player_action::rotate_right;
-  case 'f':
-    return player_action::fire_bullet;
-  }
-
-  return player_action::up;
-}
-
-
+#include "message.hpp"
 
 class client
 {
 public:
-  client(asio::io_context& io_context, const asio::ip::tcp::resolver::results_type& endpoints, std::queue<game_state>& incoming_message_queue)
-    : strand_(asio::make_strand(io_context)), io_context_(io_context), socket_(io_context), incoming_message_queue_(incoming_message_queue)
+  client(asio::io_context& io_context, const asio::ip::tcp::resolver::results_type& endpoints,
+         std::queue<game_state>& incoming_message_queue)
+    : io_context_(io_context), socket_(io_context), incoming_message_queue_(incoming_message_queue)
   {
-    buffer_.resize(100);
     do_connect_to_server(endpoints);
   }
 
@@ -45,8 +21,8 @@ public:
   {
     bool write_in_progress = !outgoing_message_queue_.empty();
 
-    player_action_message pam(pa);
-    outgoing_message_queue_.push(pam);
+    message<player_action> msg(pa);
+    outgoing_message_queue_.push(msg);
 
     // Only start an asynchronous write task if one is not already in progress.
     if (!write_in_progress)
@@ -89,14 +65,13 @@ private:
 
   void do_read_from_server()
   {
-    asio::async_read(socket_, asio::buffer(buffer_, read_msg_len),
+    asio::async_read(socket_, asio::buffer(temp_in_msg.body.data(), temp_in_msg.size()),
                      [this] (const asio::error_code& ec, std::size_t /* bytes_transferred */)
                      {
                        if (!ec)
                          {
-                           std::memcpy(&game_state_, buffer_.data(), read_msg_len);
+                           std::memcpy(&game_state_, temp_in_msg.body.data(), temp_in_msg.size());
                            incoming_message_queue_.push(game_state_);
-                           //draw_game_state();
                            do_read_from_server();
                          }
                        else
@@ -107,19 +82,13 @@ private:
                      });
   }
 
-  
-
   void do_write_to_server()
   {
-    asio::async_write(socket_, asio::buffer(outgoing_message_queue_.front().data(), write_msg_len),
+    asio::async_write(socket_, asio::buffer(outgoing_message_queue_.front().body.data(), outgoing_message_queue_.front().size()),
                       [this] (const asio::error_code& ec, std::size_t bytes_transferred)
                       {
                         if (!ec)
-                          {
-                            // std::cout << "Player action "
-                            //           << get_player_action_str(outgoing_message_queue_.front().msg())
-                            //           << " sent to server\n";
-                                                       
+                          {         
                             outgoing_message_queue_.pop();
                             if (!outgoing_message_queue_.empty())
                               {
@@ -133,26 +102,23 @@ private:
                           }
                       });
   }
-                     
 
-  void draw_game_state()
-  {
-    std::cout << "x = " << game_state_.x << ", y = " << game_state_.y << "\n";
-  }
-
-  size_t read_msg_len = sizeof(game_state);
-  size_t write_msg_len = 1;
-  std::vector<uint8_t> buffer_;
   asio::io_context& io_context_;
   asio::ip::tcp::socket socket_;
 
-  asio::strand<asio::io_context::executor_type> strand_;
+  game_state game_state_;
+  message<game_state> temp_in_msg;
 
   std::queue<game_state>& incoming_message_queue_;
-  std::queue<player_action_message> outgoing_message_queue_;
-  game_state game_state_;
+  std::queue<message<player_action>> outgoing_message_queue_;
+
 };
-  
+
+void draw_game_state(game_state gs)
+  {
+    std::cout << "game_running = " << gs.game_running << ", x = " << gs.x << ", y = " << gs.y << "\n";
+  }
+
 int main() {
 
   asio::io_context io_context;
@@ -163,14 +129,21 @@ int main() {
   client c(io_context, endpoints, incoming_msgs);
   std::thread t([&]() { io_context.run(); });
 
-  
+
+  std::string line;
   char action_c;
-  while (true) {
-    std::cin.get(action_c);
-    if (action_c == '\n')
-      break;
-    player_action action = get_player_action(action_c);
-    c.write_to_server(action);
+  while (std::getline(std::cin, line)) {
+    while (!incoming_msgs.empty())
+      {
+        draw_game_state(incoming_msgs.front());
+        incoming_msgs.pop();
+      }
+   
+    for (auto ch : line)
+      {
+        player_action action = get_player_action(ch);
+        c.write_to_server(action);
+      }
   }
 
   // Instead of this, use strand so write operations can complete before closing socket.

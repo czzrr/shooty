@@ -3,29 +3,27 @@
 
 enum class player_action : uint8_t { up, down, left, right, rotate_left, rotate_right, fire_bullet };
 
-class player_action_message
+player_action get_player_action(char action)
 {
-public:
-  player_action_message() { message_.resize(1); }
-  
-  player_action_message(player_action pa)
-  {
-    message_.push_back(pa);
+  switch (action) {
+  case 'w':
+    return player_action::up;
+  case 'a':
+    return player_action::left;
+  case 's':
+    return player_action::down;
+  case 'd':
+    return player_action::right;
+  case 'l':
+    return player_action::rotate_left;
+  case 'r':
+    return player_action::rotate_right;
+  case 'f':
+    return player_action::fire_bullet;
   }
 
-  player_action msg()
-  {
-    return message_[0];
-  }
-
-  player_action* data()
-  {
-    return message_.data();
-  }
-  
-private:
-  std::vector<player_action> message_;
-};
+  return player_action::up;
+}
 
 std::string get_player_action_str(player_action action)
 {
