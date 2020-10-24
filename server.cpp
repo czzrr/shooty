@@ -1,35 +1,29 @@
-
+#include <iostream>
+#include <memory>
+#include "asio.hpp"
+#include <queue>
+#include "player.hpp"
+#include "game.hpp"
 
 // The server's connetion to a client.
-class connection_to_client : public std::enable_shared_from_this<client_connection>
+class connection_to_client : public std::enable_shared_from_this<connection_to_client>
 {
 public:
-  connection_to_client(asio::io_context& io_context, asio::ip::tcp::socket socket, int id,
-                       std::queue<player_action_message>& incoming_message_queue)
-    : io_context_(io_context), socket_(socket), incoming_message_queue_(incoming_message_queue), id_(id)
+  connection_to_client(asio::io_context& io_context, int id,
+                       std::queue<owned_player_action>& incoming_message_queue)
+    : io_context_(io_context), socket_(io_context), incoming_message_queue_(incoming_message_queue), id_(id)
+  {
+    //do_read_from_client();
+  }
+
+  void start()
   {
     do_read_from_client();
   }
   
-private:
-
-  
-  void do_read_from_client()
+  asio::ip::tcp::socket& socket()
   {
-    asio::async_read(socket_, asio::buffer(temp_player_action_msg_.data(), read_msg_len_),
-                     [this] (const asio::error_code& ec, std::size_t /* bytes_transferred */)
-                     {
-                       if (!ec)
-                         {
-                           owned_player_action opa(temp_player_action_msg_.data()[0], id);
-                           incoming_message_queue_.push(opa);
-                           do_read_from_server();
-                         }
-                       else
-                         {
-                           do_disconnect_from_server();
-                         }
-                     });
+    return socket_;
   }
 
   void write_to_client(game_state gs)
@@ -40,6 +34,29 @@ private:
       {
         do_write_to_client();
       }
+  }
+  
+private:
+  
+  void do_read_from_client()
+  {
+    auto self(shared_from_this());
+    asio::async_read(socket_, asio::buffer(temp_player_action_msg_.data(), sizeof(player_action)),
+                     [this, self] (const asio::error_code& ec, std::size_t /* bytes_transferred */)
+                     {
+                       if (!ec)
+                         {
+                           owned_player_action opa(temp_player_action_msg_.data()[0], id_);
+                           incoming_message_queue_.push(opa);
+                           do_read_from_client();
+                         }
+                       else
+                         {
+                           //std::cout << "do_read_from_client: " << ec.message() << "\n";
+                           //do_read_from_client();
+                           //do_disconnect_from_client();
+                         }
+                     });
   }
 
   void do_write_to_client()
@@ -52,12 +69,13 @@ private:
                             outgoing_message_queue_.pop();
                             if (!outgoing_message_queue_.empty())
                               {
-                                do_write_to_server();
+                                do_write_to_client();
                               }
                           }
                         else
                           {
-                            do_disconnect_from_client();
+                            std::cout << "do_write_to_client: " << ec.message() << "\n";
+                            //do_disconnect_from_client();
                           }
                       });
   }
@@ -76,7 +94,7 @@ private:
   player_action_message temp_player_action_msg_;
 
   // How many bytes to read from a client.
-  size_t read_msg_len_ = sizeof(owned_player_move_message);
+  size_t read_msg_len_ = sizeof(player_action);
 
   // How many bytes to write to a client.
   size_t write_msg_len_ = sizeof(game_state);
@@ -97,3 +115,92 @@ private:
   // The queue where the server puts the messages that are to be sent to the connected client.
   std::queue<game_state_message> outgoing_message_queue_;
 };
+
+class server
+{
+public:
+  server(asio::io_context& io_context, unsigned int port)
+    : io_context_(io_context), acceptor_(io_context, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), port))
+  {
+    std::cout << "Server listening on port " << port << "\n";
+    do_listen_for_client_connections();
+  }
+
+  std::queue<owned_player_action>& incoming()
+  {
+    return incoming_message_queue_;
+  }
+  
+private:
+  void disconnect_from_client(std::shared_ptr<connection_to_client> conn)
+  {
+    // Remove connection from list of connections
+    
+  }
+  
+  void do_listen_for_client_connections()
+  {
+    std::shared_ptr<connection_to_client> new_connection =
+      std::make_shared<connection_to_client>(io_context_, uid_, incoming_message_queue_);
+
+    acceptor_.async_accept(new_connection->socket(), [this, new_connection](const asio::error_code& ec)
+                           {
+                             if (!ec)
+                               {
+                                 std::cout << "[Client connected] " << new_connection->socket().remote_endpoint() << "\n";
+                                 uid_++;
+                                 //connections_.push_back(new_connection);
+                                 new_connection->start();
+                                 do_listen_for_client_connections();
+                               }
+                             else
+                               {
+                               }
+                           });
+  }
+
+  void write_to_clients(game_state gs)
+  {
+    for (auto connection : connections_)
+      {
+        connection->write_to_client(gs);
+      }
+  }
+
+  int uid_;
+  
+  asio::io_context& io_context_;
+  
+  asio::ip::tcp::acceptor acceptor_;
+  
+  // The server's connections to clients.
+  std::vector<std::shared_ptr<connection_to_client>> connections_;
+
+  // Incoming messages from clients to server.
+  std::queue<owned_player_action> incoming_message_queue_;
+};
+
+int main()
+{
+  asio::io_context io_context;
+  
+  unsigned int port = 60000;
+  server srv(io_context, port);
+  
+  std::thread t([&]() { io_context.run(); });
+  
+  while(true)
+    {
+      // If any incoming messages, update game state according to them
+      std::queue<owned_player_action>& incoming_msgs = srv.incoming();
+
+      if (!incoming_msgs.empty())
+        {
+          owned_player_action opa = incoming_msgs.front();
+          std::cout << "[Player " << opa.get_id() << "]: " << get_player_action_str(opa.get_action()) << "\n";
+          incoming_msgs.pop();
+        }
+    }
+  
+  return 0;
+}
