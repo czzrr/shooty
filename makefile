@@ -1,8 +1,8 @@
 all: client server
 
 client: client.cpp
-	clang++ client.cpp -I/home/cacosta/extlibs/asio-1.18.0/include/ -o client.out -pthread
+	clang++ client.cpp -I/home/cacosta/extlibs/asio-1.18.0/include/ -I/usr/include/SDL2/ -o client.out -pthread -lSDL2
 server: server.cpp
-	clang++ server.cpp -I/home/cacosta/extlibs/asio-1.18.0/include/ -o server.out -pthread
+	clang++ server.cpp -I/home/cacosta/extlibs/asio-1.18.0/include/ -I/usr/include/SDL2/ -o server.out -pthread -lSDL2
 
 

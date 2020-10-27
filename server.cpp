@@ -27,10 +27,10 @@ public:
     return socket_;
   }
 
-  void write_to_client(game_state gs)
+  void write_to_client(game gs)
   {
     bool write_in_progress = !outgoing_message_queue_.empty();
-    outgoing_message_queue_.push(message<game_state>(gs));
+    outgoing_message_queue_.push(message<game>(gs));
     if (!write_in_progress)
       {
         do_write_to_client();
@@ -65,14 +65,16 @@ private:
 
   void do_write_to_client()
   {
-    asio::async_write(socket_, asio::buffer(outgoing_message_queue_.front().body.data(), outgoing_message_queue_.front().size()),
-                      [this] (const asio::error_code& ec, std::size_t /* bytes_transferred */)
+    asio::async_write(socket_, asio::buffer(outgoing_message_queue_.front().body.data(), 168),
+                      [this] (const asio::error_code& ec, std::size_t bytes_transferred)
                       {
                         if (!ec)
                           {
+                            std::cout << "sent " << bytes_transferred << " bytes\n";
                             outgoing_message_queue_.pop();
                             if (!outgoing_message_queue_.empty())
                               {
+                                printf("writing to client again\n");
                                 do_write_to_client();
                               }
                           }
@@ -113,14 +115,14 @@ private:
   std::queue<owned_player_action>& incoming_message_queue_;
 
   // The queue where the server puts the messages that are to be sent to the connected client.
-  std::queue<message<game_state>> outgoing_message_queue_;
+  std::queue<message<game>> outgoing_message_queue_;
 };
 
 class server
 {
 public:
-  server(asio::io_context& io_context, unsigned int port)
-    : io_context_(io_context), acceptor_(io_context, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), port))
+  server(asio::io_context& io_context, unsigned int port, game& g)
+    : io_context_(io_context), acceptor_(io_context, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), port)), game_(g)
   {
     std::cout << "Server listening on port " << port << "\n";
     do_listen_for_client_connections();
@@ -131,7 +133,7 @@ public:
     return incoming_message_queue_;
   }
 
-  void write_to_clients(game_state gs)
+  void write_to_clients(game gs)
   {
     bool invalid_clients = false;
     for (auto& connection : connections_)
@@ -141,7 +143,7 @@ public:
       }
       
   }
-  
+
 private:
   void disconnect_from_client(std::shared_ptr<connection_to_client> conn)
   {
@@ -160,8 +162,11 @@ private:
                                  std::cout << "[Client connected] " << new_connection->socket().remote_endpoint() << "\n";
                                  uid_++;
                                  connections_.insert(std::move(new_connection));
+
+                                 
                                  new_connection->start();
                                  do_listen_for_client_connections();
+                                 //new_connection->write_to_client(game_);
                                }
                              else
                                {
@@ -171,6 +176,8 @@ private:
   }
 
   int uid_;
+
+  game& game_;
   
   asio::io_context& io_context_;
   
@@ -185,36 +192,57 @@ private:
 
 int main()
 {
+  game g;
+  g.add_player(player(500, 400, 1));
+  g.add_player(player(300, 500, 2));
+  std::cout << "capacity of player vector: " << g.get_players().capacity() << "\n";
+  
+  std::cout << "is standard layout: " << std::is_standard_layout<game>::value << "\n";
+  std::cout << "is pod: " << std::is_pod<player>::value << "\n";
+
+  //static_assert(std::is_standard_layout<game>::value, "Data too complex\n");
+  
   asio::io_context io_context;
   
   unsigned int port = 60000;
-  server srv(io_context, port);
+  server srv(io_context, port, g);
   
   std::thread t([&]() { io_context.run(); });
 
-  game_state gs;
-  gs.game_running = false;
-  gs.x = 0;
-  gs.y = 0;
+
+
+  
+  std::cout << "sizeof(vector) = " << sizeof(std::vector<player>) << "\n";
+  std::cout << "sizeof(player) = " << sizeof(player) << "\n";
+  std::cout << "sizeof(game) = " << sizeof(game) << "\n";
+
+  std::cout << "game size with player vector = " << sizeof(game) + g.get_players().size() * sizeof(player) << "\n";
+    
+  
+  asio::steady_timer timer(io_context, asio::chrono::seconds(3));
+  timer.wait();
+  
+  srv.write_to_clients(g);
+
+  // asio::steady_timer timer1(io_context, asio::chrono::seconds(2));
+  // timer1.wait();
+
+  std::queue<owned_player_action>& incoming_msgs = srv.incoming();
   
   while(true)
     {
-      // If any incoming messages, update game state according to them
-      std::queue<owned_player_action>& incoming_msgs = srv.incoming();
 
+      // If any incoming messages, update game state according to them
       if (!incoming_msgs.empty())
         {
           owned_player_action opa = incoming_msgs.front();
-          std::cout << "[Player " << opa.get_id() << "]: " << get_player_action_str(opa.get_action()) << "\n";
+          std::cout << "[Player " << opa.get_id() << "]\n";
           incoming_msgs.pop();
           
-          gs.game_running = true;
-          gs.x++;
-          gs.y++;
-
-          srv.write_to_clients(gs);
+          srv.write_to_clients(g);
         }
     }
+
   
   return 0;
 }
