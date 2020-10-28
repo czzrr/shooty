@@ -28,12 +28,12 @@ public:
         std::queue<game>& incoming_msgs = client_.get_incoming_msgs();
         while (!incoming_msgs.empty())
           {
-            std::cout << "accessing game object from server\n";
+            //std::cout << "accessing game object from server\n";
             game g = incoming_msgs.front();
-            std::cout << "accessed game object from server\n";
+            //std::cout << "accessed game object from server\n";
             incoming_msgs.pop();
             g.get_players();
-            std::cout << "trying to draw game\n";
+            //std::cout << "trying to draw game\n";
             game_drawer_.draw_game(g);
             
             //game_.advance();
@@ -126,21 +126,30 @@ public:
                 break;
               }
           }
+
       }
     if (u_)
       client_.write_to_server(player_action::up);
-    // if (d_)
-    //   game_.move_player_down(1);
-    // if (l_)
-    //   game_.move_player_left(1);
-    // if (r_)
-    //   game_.move_player_right(1);
-    // if (f_)
-    //   game_.player_fire(1);
-    // if (rr_)
-    //   game_.player_rotate_right(1);
-    // if (rl_)
-    //   game_.player_rotate_left(1);
+    if (d_)
+       client_.write_to_server(player_action::down);
+    if (l_)
+       client_.write_to_server(player_action::left);
+    if (r_)
+       client_.write_to_server(player_action::right);
+    if (f_)
+       client_.write_to_server(player_action::fire_bullet);
+    if (rr_)
+       client_.write_to_server(player_action::rotate_right);
+    if (rl_)
+       client_.write_to_server(player_action::rotate_left);
+
+    // u_ = false;
+    // d_ = false;
+    // l_ = false;
+    // r_ = false;
+    // f_ = false;
+    // rr_ = false;
+    // rl_ = false;
   }
   
 private:

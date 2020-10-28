@@ -17,6 +17,9 @@
 #include "game_drawer.hpp"
 #include "game_controller.hpp"
 
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/serialization/vector.hpp>
 
 class client
 {
@@ -82,23 +85,18 @@ private:
 
   void do_read_from_server()
   {
-    asio::async_read(socket_, asio::buffer(temp_in_msg.body.data(), 168),
+    do_read_header();
+  }
+
+  void do_read_header()
+  {
+    asio::async_read(socket_, asio::buffer(msg_received_.header, msg_received_.header.size()),
                      [this] (const asio::error_code& ec, std::size_t bytes_transferred)
                      {
                        if (!ec)
                          {
-                           std::cout << "read from server\n";
-                           std::cout << "read " << bytes_transferred << " bytes\n";
-                           game* g = reinterpret_cast<game*>(temp_in_msg.body.data());
-                           game_ = *g;
-                           for (auto player : game_.get_players())
-                             {
-                               std::cout << player.get_x() << " " << player.get_y() << "\n";
-                             }
-                           //std::memcpy(&game_, temp_in_msg.body.data(), 168);
-                           std::cout << "successful memcpy\n";
-                           incoming_message_queue_.push(game_);
-                           do_read_from_server();
+                           //std::cout << "read header: " << msg_received_.header << "\n";
+                           do_read_body();
                          }
                        else
                          {
@@ -108,13 +106,41 @@ private:
                      });
   }
 
+
+  void do_read_body()
+  {
+    asio::async_read(socket_, asio::buffer(msg_received_.body, msg_received_.parse_header(msg_received_.header)),
+                     [this] (const asio::error_code& ec, std::size_t bytes_transferred)
+                     {
+                       if (!ec)
+                         {
+                           //std::cout << "str_received_: " << msg_received_.body << "\nsize: " << msg_received_.body.size() << "\n";
+                           std::stringstream ss;
+                           ss << msg_received_.body;
+                           {
+                             boost::archive::text_iarchive ia(ss);
+                             ia & game_;
+                           }
+
+                           incoming_message_queue_.push(game_);
+                           do_read_from_server();
+                         }
+                       else
+                         {
+                           std::cout << "do_read_from_server: " << ec.message() << "\n";
+                           do_disconnect_from_server();
+                         }
+                     }); 
+  }
+  
   void do_write_to_server()
   {
     asio::async_write(socket_, asio::buffer(outgoing_message_queue_.front().body.data(), outgoing_message_queue_.front().size()),
                       [this] (const asio::error_code& ec, std::size_t bytes_transferred)
                       {
                         if (!ec)
-                          {         
+                          {
+                            std::cout << "Sent to server\n";
                             outgoing_message_queue_.pop();
                             if (!outgoing_message_queue_.empty())
                               {
@@ -129,6 +155,8 @@ private:
                       });
   }
 
+  s_message msg_received_;
+  
   asio::io_context& io_context_;
   asio::ip::tcp::socket socket_;
 

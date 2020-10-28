@@ -1,9 +1,25 @@
 #ifndef BULLET_H
 #define BULLET_H
 
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/serialization/vector.hpp>
+
 class bullet
 {
 public:
+
+  friend class boost::serialization::access;
+  
+  template<class Archive>
+  void serialize(Archive& ar, const unsigned int version)
+  {
+    ar & x_;
+    ar & y_;
+  }
+
+  bullet() { }
+  
   bullet(int x, int y, double dx, double dy)
   {
     x_ = x;

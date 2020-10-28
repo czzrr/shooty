@@ -4,9 +4,24 @@
 #include "player.hpp"
 #include "bullet.hpp"
 
+
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/serialization/vector.hpp>
+
 class game
 {
 public:
+
+  friend class boost::serialization::access;
+  
+  template<class Archive>
+  void serialize(Archive& ar, const unsigned int version)
+  {
+    ar & players_;
+  }
+
+  
   game()
   {
 

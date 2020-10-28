@@ -9,12 +9,29 @@
 
 #include "constants.hpp"
 
+
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/serialization/vector.hpp>
+
 const double PI = 3.141592653589793238463;
 const double DEG_TO_RAD = PI / 180.0;
 
 class player
 {
 public:
+  friend class boost::serialization::access;
+  
+  template<class Archive>
+  void serialize(Archive& ar, const unsigned int version)
+  {
+    ar & x_;
+    ar & y_;
+    ar & bullets_;
+  }
+  
+  player() { }
+  
   player(int x, int y, int id): x_(x), y_(y), id_(id) { }
 
   int get_x()
@@ -90,7 +107,7 @@ public:
   
 private:
 
-  uint32_t last_time_fired_ = 0;
+  uint32_t last_time_fired_ = SDL_GetTicks();
   double dir_ = 0;
   double ddir_ = 3.0;
   int id_;
