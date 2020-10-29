@@ -74,6 +74,8 @@ private:
                            std::memcpy(&pa, temp_in_msg_.body.data(), temp_in_msg_.size());
                            owned_player_action opa(pa, id_);
                            incoming_message_queue_.push(opa);
+
+                           std::cout << "Read " << get_player_action_str(pa) << " from " << socket_.remote_endpoint() << "\n";
                            do_read_from_client();
                          }
                        else
@@ -289,8 +291,8 @@ int main()
   std::thread t([&]() { io_context.run(); });
 
   
-  asio::steady_timer timer(io_context, asio::chrono::seconds(3));
-  timer.wait();
+  // asio::steady_timer timer(io_context, asio::chrono::seconds(3));
+  // timer.wait();
   
   srv.write_to_clients(g);
 

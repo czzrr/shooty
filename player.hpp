@@ -5,13 +5,9 @@
 
 #include "bullet.hpp"
 #include <cmath>
-//#include "game_drawer.hpp"
 
 #include "constants.hpp"
 
-
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
 #include <boost/serialization/vector.hpp>
 
 const double PI = 3.141592653589793238463;
@@ -20,8 +16,9 @@ const double DEG_TO_RAD = PI / 180.0;
 class player
 {
 public:
+
+  // For (de)serialization.
   friend class boost::serialization::access;
-  
   template<class Archive>
   void serialize(Archive& ar, const unsigned int version)
   {
@@ -109,7 +106,7 @@ private:
 
   uint32_t last_time_fired_ = SDL_GetTicks();
   double dir_ = 0;
-  double ddir_ = 3.0;
+  double ddir_ = 2.0;
   int id_;
   int x_;
   int y_;
@@ -120,28 +117,6 @@ private:
 };
 
 enum class player_action : uint8_t { up, down, left, right, rotate_left, rotate_right, fire_bullet };
-
-player_action get_player_action(char action)
-{
-  switch (action) {
-  case 'w':
-    return player_action::up;
-  case 'a':
-    return player_action::left;
-  case 's':
-    return player_action::down;
-  case 'd':
-    return player_action::right;
-  case 'l':
-    return player_action::rotate_left;
-  case 'r':
-    return player_action::rotate_right;
-  case 'f':
-    return player_action::fire_bullet;
-  }
-
-  return player_action::up;
-}
 
 std::string get_player_action_str(player_action action)
 {
@@ -161,8 +136,6 @@ std::string get_player_action_str(player_action action)
   case player_action::fire_bullet:
     return "fire_bullet";
   }
-
-  return "up";
 }
 
 class owned_player_action

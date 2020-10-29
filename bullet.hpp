@@ -1,8 +1,8 @@
 #ifndef BULLET_H
 #define BULLET_H
 
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
+#include "constants.hpp"
+
 #include <boost/serialization/vector.hpp>
 
 class bullet
@@ -28,6 +28,11 @@ public:
     dy_ = dy;
   }
 
+  bool outside_screen()
+  {
+    return x_ < 0 || x_ > SCREEN_WIDTH || y_ < 0 || y_ > SCREEN_HEIGHT;
+  }
+  
   int get_x()
   {
     return x_;

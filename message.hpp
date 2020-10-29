@@ -24,7 +24,7 @@ struct message
     std::memcpy(body.data(), &data, sizeof(T));
   }
 
-  size_t size()
+  size_t size() const
   {
     return sizeof(T);
   }

@@ -2,62 +2,58 @@
 #define CLIENT_H
 
 #include "asio.hpp"
+#include "SDL.h"
+#include <boost/archive/text_iarchive.hpp>
+
 #include <iostream>
-#include <vector>
 #include <queue>
 
-#include "player.hpp"
 #include "game.hpp"
 #include "message.hpp"
 
-#include "SDL.h"
-
-#include "player.hpp"
-#include "bullet.hpp"
-#include "game_drawer.hpp"
-#include "game_controller.hpp"
-
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/serialization/vector.hpp>
-
+// This class represents the client's connection to the server.
 class client
 {
 public:
+  
   client(asio::io_context& io_context, const asio::ip::tcp::resolver::results_type& endpoints)
     : io_context_(io_context), socket_(io_context)
   {
-    game_.add_player(player(100, 100, 1));
-    game_.add_player(player(300, 500, 2));
+    // IO context and socket is initialized; connect to the server now.
     do_connect_to_server(endpoints);
   }
 
-  std::queue<game>& get_incoming_msgs()
+  // Get queue of game states sent from the server.
+  std::queue<game>& get_incoming_games()
   {
-    return incoming_message_queue_;
+    return incoming_game_queue_;
   }
-  
+
+  // Send a player action to the server.
   void write_to_server(player_action pa)
   {
-    bool write_in_progress = !outgoing_message_queue_.empty();
+    // WARNING: I'm not sure if accessing the outgoing queue in two different asio tasks is thread-safe.
+    // Can async tasks called from the same thread run concurrently?
+    asio::post(io_context_,
+               [this, pa]()
+               {
+                 bool write_in_progress = !outgoing_message_queue_.empty();
+                 message<player_action> msg(pa);
+                 outgoing_message_queue_.push(msg);
 
-    message<player_action> msg(pa);
-    outgoing_message_queue_.push(msg);
-
-    // Only start an asynchronous write task if one is not already in progress.
-    if (!write_in_progress)
-      {
-        do_write_to_server();
-      }
+                 std::cout << "write_to_server()\n";
+                 std::cout << "queue size: " << outgoing_message_queue_.size() << "\n";
+                 if (!write_in_progress)
+                   {
+                     std::cout << "write not in progress\n";
+                     do_write_to_server();
+                   }
+                   
+               });
   }
 
+  // Disconnecting from the server means creating an asynchronous operation that closes the socket.
   void disconnect_from_server()
-  {
-    do_disconnect_from_server();
-  }
-  
-private:
-  void do_disconnect_from_server()
   {
     std::cout << "Disconnecting from server\n";
     asio::post(io_context_, [this] ()
@@ -66,6 +62,9 @@ private:
                             });
   }
   
+private:
+
+  // Connect to server. This is called from the constructor.
   void do_connect_to_server(const asio::ip::tcp::resolver::results_type& endpoints)
   {
     asio::async_connect(socket_, endpoints,
@@ -73,21 +72,17 @@ private:
                         {
                           if (!ec)
                             {
-                              do_read_from_server();
+                              do_read_header();
                             }
                           else
                             {
                               std::cout << "do_connect_to_server: " << ec.message() << "\n";
-                              do_disconnect_from_server();
+                              disconnect_from_server();
                             }
                         });
   }
 
-  void do_read_from_server()
-  {
-    do_read_header();
-  }
-
+  // Firstly, the header is read so the client knows how many bytes will be received.
   void do_read_header()
   {
     asio::async_read(socket_, asio::buffer(msg_received_.header, msg_received_.header.size()),
@@ -96,17 +91,20 @@ private:
                        if (!ec)
                          {
                            //std::cout << "read header: " << msg_received_.header << "\n";
+                           
+                           // Reading header was successful. Proceed to read the body.
                            do_read_body();
                          }
                        else
                          {
-                           std::cout << "do_read_from_server: " << ec.message() << "\n";
-                           do_disconnect_from_server();
+                           std::cout << "do_read_header: " << ec.message() << "\n";
+                           disconnect_from_server();
                          }
                      });
   }
 
 
+  // When the client knows how many bytes to receive, it can read the body of the message sent from the server.
   void do_read_body()
   {
     asio::async_read(socket_, asio::buffer(msg_received_.body, msg_received_.parse_header(msg_received_.header)),
@@ -115,24 +113,30 @@ private:
                        if (!ec)
                          {
                            //std::cout << "str_received_: " << msg_received_.body << "\nsize: " << msg_received_.body.size() << "\n";
+                           // Successful read of body. Now we deserialize it.
                            std::stringstream ss;
                            ss << msg_received_.body;
+                           game g;
                            {
                              boost::archive::text_iarchive ia(ss);
-                             ia & game_;
+                             ia & g;
                            }
 
-                           incoming_message_queue_.push(game_);
-                           do_read_from_server();
+                           // Push the deserialized game object onto the incoming queue.
+                           incoming_game_queue_.push(g);
+
+                           // Start another asynchronous read.
+                           do_read_header();
                          }
                        else
                          {
-                           std::cout << "do_read_from_server: " << ec.message() << "\n";
-                           do_disconnect_from_server();
+                           std::cout << "do_read_body: " << ec.message() << "\n";
+                           disconnect_from_server();
                          }
                      }); 
   }
-  
+
+  // This function takes care of sending the player actions stored in the outgoing queue to the server.
   void do_write_to_server()
   {
     asio::async_write(socket_, asio::buffer(outgoing_message_queue_.front().body.data(), outgoing_message_queue_.front().size()),
@@ -141,7 +145,11 @@ private:
                         if (!ec)
                           {
                             std::cout << "Sent to server\n";
+
+                            // Message is sent, so pop it off the queue.
                             outgoing_message_queue_.pop();
+
+                            // If more messages are to be send, do so.
                             if (!outgoing_message_queue_.empty())
                               {
                                 do_write_to_server();
@@ -150,20 +158,21 @@ private:
                         else
                           {
                             std::cout << "do_write_to_server: " << ec.message() << "\n";
-                            do_disconnect_from_server();
+                            disconnect_from_server();
                           }
                       });
   }
 
-  s_message msg_received_;
-  
   asio::io_context& io_context_;
   asio::ip::tcp::socket socket_;
 
-  game game_;
-  message<game> temp_in_msg;
+  // This is where an incoming message is temporarily stored before being converted into a game object.
+  s_message msg_received_;
+  
+  // Queue of deserialized game objects received from the server.
+  std::queue<game> incoming_game_queue_;
 
-  std::queue<game> incoming_message_queue_;
+  // Queue of player actions that are to be send to the server.
   std::queue<message<player_action>> outgoing_message_queue_;
 
 };

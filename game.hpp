@@ -1,26 +1,25 @@
 #ifndef GAME_H
 #define GAME_H
 
+#include <iostream>
+
 #include "player.hpp"
 #include "bullet.hpp"
+#include <vector>
 
-
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
 #include <boost/serialization/vector.hpp>
 
 class game
 {
 public:
 
+  // For (de)serialization.
   friend class boost::serialization::access;
-  
   template<class Archive>
   void serialize(Archive& ar, const unsigned int version)
   {
     ar & players_;
   }
-
   
   game()
   {
@@ -71,15 +70,27 @@ public:
   {
     players_[id].rotate_left();
   }
-  
+
+  // Advance to the next game state.
   void advance()
   {
     for (player& player : players_)
-      
       {
-        for (bullet& bullet : player.get_bullets())
+        std::vector<bullet>& bullets = player.get_bullets();
+        bool bullet_outside_screen = false;
+        for (bullet& bullet : bullets)
           {
+            if (bullet.outside_screen())
+              {
+                bullet_outside_screen = true;
+              }
+            
             bullet.move();
+          }
+
+        if (bullet_outside_screen)
+          {
+            bullets.erase(std::remove_if(bullets.begin(), bullets.end(), [](bullet b) { return b.outside_screen(); }));
           }
       }
   }
