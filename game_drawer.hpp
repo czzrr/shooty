@@ -40,7 +40,13 @@ public:
     SDL_RenderPresent(renderer_);
   }
 
-
+  void close()
+  {
+    SDL_DestroyRenderer(renderer_);
+    SDL_DestroyWindow(window_);
+    SDL_Quit();
+  }
+  
 private:
 
   void init()

@@ -60,6 +60,12 @@ public:
     std::queue<game>& incoming_games = client_.get_incoming_games();
     while (!quit_)
       {
+        // Break out of loop if connection to server is lost.
+        if (!client_.is_connected())
+          {
+            break;
+          }
+        
         // If the server sent game states, draw them.
         while (!incoming_games.empty())
           {
@@ -71,6 +77,9 @@ public:
         SDL_Delay(1000 / FRAMES_PER_SECOND);
         handle_key_events();
       }
+
+    // Terminate SDL.
+    game_drawer_.close();
   }
 
   // Handle key input from player.

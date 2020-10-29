@@ -11,6 +11,11 @@
 #include "game.hpp"
 #include "message.hpp"
 
+#include <string>
+
+// TODO: the classes 'client' and connection_to_client' are similar enough that we can get by with
+// only using one 'connection' class if we do some generalizing.
+
 // This class represents the client's connection to the server.
 class client
 {
@@ -38,7 +43,8 @@ public:
                [this, pa]()
                {
                  bool write_in_progress = !outgoing_message_queue_.empty();
-                 message<player_action> msg(pa);
+                 s_message msg;
+                 msg.body = std::to_string(static_cast<uint8_t>(pa));
                  outgoing_message_queue_.push(msg);
 
                  std::cout << "write_to_server()\n";
@@ -52,6 +58,11 @@ public:
                });
   }
 
+  bool is_connected()
+  {
+    return socket_.is_open();
+  }
+  
   // Disconnecting from the server means creating an asynchronous operation that closes the socket.
   void disconnect_from_server()
   {
@@ -90,7 +101,7 @@ private:
                      {
                        if (!ec)
                          {
-                           //std::cout << "read header: " << msg_received_.header << "\n";
+                           msg_received_.set_header(msg_received_.parse_header(msg_received_.header));
                            
                            // Reading header was successful. Proceed to read the body.
                            do_read_body();
@@ -107,7 +118,7 @@ private:
   // When the client knows how many bytes to receive, it can read the body of the message sent from the server.
   void do_read_body()
   {
-    asio::async_read(socket_, asio::buffer(msg_received_.body, msg_received_.parse_header(msg_received_.header)),
+    asio::async_read(socket_, asio::buffer(msg_received_.body, msg_received_.header_n),
                      [this] (const asio::error_code& ec, std::size_t bytes_transferred)
                      {
                        if (!ec)
@@ -139,7 +150,8 @@ private:
   // This function takes care of sending the player actions stored in the outgoing queue to the server.
   void do_write_to_server()
   {
-    asio::async_write(socket_, asio::buffer(outgoing_message_queue_.front().body.data(), outgoing_message_queue_.front().size()),
+    // No use of header at the moment since 1 byte always will be sent.
+    asio::async_write(socket_, asio::buffer(outgoing_message_queue_.front().body.data(), 1 /* Always 1 byte atm */),
                       [this] (const asio::error_code& ec, std::size_t bytes_transferred)
                       {
                         if (!ec)
@@ -173,7 +185,7 @@ private:
   std::queue<game> incoming_game_queue_;
 
   // Queue of player actions that are to be send to the server.
-  std::queue<message<player_action>> outgoing_message_queue_;
+  std::queue<s_message> outgoing_message_queue_;
 
 };
 

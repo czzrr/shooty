@@ -1,59 +1,32 @@
 #ifndef MESSAGE_H
 #define MESSAGE_H
 
-#include <vector>
-#include <array>
-#include <string>
-#include <cstring>
-
-#include <iostream>
-
-template<typename T>
-struct message
-{
-  std::vector<uint8_t> body;
-
-  message()
-  {
-    body.resize(sizeof(T));
-  }
-  
-  message(T data)
-  {
-    body.resize(sizeof(T));
-    std::memcpy(body.data(), &data, sizeof(T));
-  }
-
-  size_t size() const
-  {
-    return sizeof(T);
-  }
-};
-
 struct s_message
 {
 
   s_message()
   {
     header.resize(4);
-    body.resize(9999);
   }
   
   bool set_header(int n)
   {
-    if (n < 0 || n > 9999)
+    // Length of header must be between 1 and 9999 inclusive.
+    if (n < 1 || n > 9999)
       return false;
 
     header = std::to_string(n);
 
+    // Pad with leading zeros so the header consists of 4 characters.
     std::string zeros;
     for (int i = 4 - header.size(); i > 0; i--)
       zeros += "0";
     zeros += header;
     header = zeros;
 
-    //std::cout << "header: " << header << "\n";
     header_n = n;
+    body.resize(header_n);
+    
     return true;
   }
 
@@ -65,7 +38,6 @@ struct s_message
   int header_n;
   std::string header;
   std::string body;
-  std::string concatted;
 };
   
 #endif
