@@ -47,11 +47,11 @@ public:
                  msg.body = std::to_string(static_cast<uint8_t>(pa));
                  outgoing_message_queue_.push(msg);
 
-                 std::cout << "write_to_server()\n";
-                 std::cout << "queue size: " << outgoing_message_queue_.size() << "\n";
+                 // std::cout << "write_to_server()\n";
+                 // std::cout << "queue size: " << outgoing_message_queue_.size() << "\n";
                  if (!write_in_progress)
                    {
-                     std::cout << "write not in progress\n";
+                     // std::cout << "write not in progress\n";
                      do_write_to_server();
                    }
                    
@@ -156,7 +156,7 @@ private:
                       {
                         if (!ec)
                           {
-                            std::cout << "Sent to server\n";
+                            // std::cout << "Sent to server\n";
 
                             // Message is sent, so pop it off the queue.
                             outgoing_message_queue_.pop();

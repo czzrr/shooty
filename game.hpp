@@ -2,12 +2,19 @@
 #define GAME_H
 
 #include <iostream>
+#include <vector>
 
 #include "player.hpp"
 #include "bullet.hpp"
-#include <vector>
+#include "constants.hpp"
 
-#include <boost/serialization/vector.hpp>
+#include <boost/serialization/map.hpp>
+
+bool collides(bullet b, player p)
+{
+  return collides_rect({b.get_pos().x, b.get_pos().y, BULLET_SIDE, BULLET_SIDE},
+                       {p.get_pos().x, p.get_pos().y, PLAYER_SIDE, PLAYER_SIDE});
+}
 
 class game
 {
@@ -23,80 +30,84 @@ public:
   
   game()
   {
-
+    
   }
   
-  void add_player(player p)
+  void add_player(int id)
   {
-   players_.push_back(p);
+    // Place player on random position (and grant him 3 seconds immunity?).
+    player p(100, 100, id);
+    players_.insert({id, p});
   }
 
-  const std::vector<player>& get_players()
+  void remove_player(int id)
+  {
+    auto found = players_.find(id);
+    if (found != players_.end())
+      {
+        players_.erase(found);
+      }
+  }
+
+  const std::map<int, player>& get_players()
   {
     return players_;
   }
 
-  void move_player_up(int id)
+  bool do_action(int id, player_action pa)
   {
-    players_[id].move_up();
-  }
-
-  void move_player_down(int id)
-  {
-    players_[id].move_down();
-  }
-
-  void move_player_left(int id)
-  {
-    players_[id].move_left();
-  }
-
-  void move_player_right(int id)
-  {
-    players_[id].move_right();
-  }
-
-  void player_fire(int id)
-  {
-    players_[id].fire();
-  }
-
-  void player_rotate_right(int id)
-  {
-    players_[id].rotate_right();
-  }
-
-  void player_rotate_left(int id)
-  {
-    players_[id].rotate_left();
+    auto found = players_.find(id);
+    if (found != players_.end())
+      {
+        found->second.do_action(pa);
+        return true;
+      }
+    return false;
   }
 
   // Advance to the next game state.
   void advance()
   {
-    for (player& player : players_)
+    std::vector<int> players_to_delete;
+    for (auto& [_, player] : players_)
       {
         std::vector<bullet>& bullets = player.get_bullets();
-        bool bullet_outside_screen = false;
-        for (bullet& bullet : bullets)
+        std::vector<bullet> bullets_to_delete;
+        for (bullet& b : player.get_bullets())
           {
-            if (bullet.outside_screen())
+            for (auto [_, p] : players_)
               {
-                bullet_outside_screen = true;
+                // Check if current player's bullets collides with another player.
+                if (player.id() != p.id() && collides(b, p))
+                  {
+                    players_to_delete.push_back(p.id());
+                    bullets_to_delete.push_back(b);
+                  }
+                // Check if bullet is outside screen.
+                else if (b.outside_screen())
+                  {
+                    bullets_to_delete.push_back(b);
+                  }
               }
-            
-            bullet.move();
+            b.move();
           }
-
-        if (bullet_outside_screen)
+        // Remove bullets that have collided with players or are out of screen.
+        for (bullet& b : bullets_to_delete)
           {
-            bullets.erase(std::remove_if(bullets.begin(), bullets.end(), [](bullet b) { return b.outside_screen(); }));
+            bullets.erase(std::remove(bullets.begin(), bullets.end(), b), bullets.end());
           }
+      }
+    // Remove players hit by a bullet.
+    for (int id : players_to_delete)
+      {
+        remove_player(id);
       }
   }
   
 private:
-  std::vector<player> players_;
+  // TODO: Have a map<int, player> instead. Also , player objects don't need an id; an id for the connection is enough.
+  std::map<int, player> players_;
+  //std::vector<player> players_;
   //std::vector<bullet> bullets_;
 };
 

@@ -25,14 +25,16 @@ public:
 
     SDL_SetRenderDrawColor(renderer_, 0xFF, 0x00, 0x00, 0xFF);
     
-    for (auto player : game_.get_players())
+    for (auto [_, player] : game_.get_players())
       {
-        SDL_Rect player_rect = { player.get_x(), player.get_y(), PLAYER_SIDE, PLAYER_SIDE };
+        point ppos = player.get_pos();
+        SDL_Rect player_rect = { ppos.x, ppos.y, PLAYER_SIDE, PLAYER_SIDE };
         SDL_RenderFillRect(renderer_, &player_rect);
 
         for (auto bullet : player.get_bullets())
           {
-            SDL_Rect bullet_rect = { bullet.get_x(), bullet.get_y(), BULLET_SIDE, BULLET_SIDE };
+            point bpos = bullet.get_pos();
+            SDL_Rect bullet_rect = { bpos.x, bpos.y, BULLET_SIDE, BULLET_SIDE };
             SDL_RenderFillRect(renderer_, &bullet_rect);
           }
       }

@@ -4,7 +4,6 @@
 
 #include "client.hpp"
 #include "game_controller.hpp"
-
   
 int main() {
 
@@ -31,4 +30,3 @@ int main() {
   if (t.joinable())
     t.join();
 }
-

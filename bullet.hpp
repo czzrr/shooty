@@ -5,55 +5,63 @@
 
 #include <boost/serialization/vector.hpp>
 
+struct point
+{
+  int x;
+  int y;
+};
+
+struct velocity
+{
+  int dx;
+  int dy;
+};
+  
 class bullet
 {
 public:
 
+  // For (de)serialization.
   friend class boost::serialization::access;
-  
   template<class Archive>
   void serialize(Archive& ar, const unsigned int version)
   {
-    ar & x_;
-    ar & y_;
+    ar & pos_.x;
+    ar & pos_.y;
   }
 
   bullet() { }
   
-  bullet(int x, int y, double dx, double dy)
+  bullet(int x, int y, int dx, int dy)
   {
-    x_ = x;
-    y_ = y;
-    dx_ = dx;
-    dy_ = dy;
+    pos_ = {x, y};
+    vel_ = {dx, dy};
   }
 
   bool outside_screen()
   {
-    return x_ < 0 || x_ > SCREEN_WIDTH || y_ < 0 || y_ > SCREEN_HEIGHT;
+    return pos_.x < 0 || pos_.x > SCREEN_WIDTH || pos_.y < 0 || pos_.y > SCREEN_HEIGHT;
+  }
+
+  point get_pos()
+  {
+    return pos_;
   }
   
-  int get_x()
-  {
-    return x_;
-  }
-
-  int get_y()
-  {
-    return y_;
-  }
-
   void move()
   {
-    x_ += (int) dx_;
-    y_ += (int) dy_;
+    pos_.x += vel_.dx;
+    pos_.y += vel_.dy;
   }
-  
+
+  bool operator==(const bullet& other)
+  {
+    return pos_.x == other.pos_.x && pos_.y == other.pos_.y;
+  }
+
 private:
-  int x_;
-  int y_;
-  double dx_;
-  double dy_;
+  point pos_;
+  velocity vel_;
 };
 
 #endif

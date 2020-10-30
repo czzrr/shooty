@@ -77,7 +77,8 @@ public:
         SDL_Delay(1000 / FRAMES_PER_SECOND);
         handle_key_events();
       }
-
+    if (client_.is_connected())
+      client_.disconnect_from_server();
     // Terminate SDL.
     game_drawer_.close();
   }
@@ -96,7 +97,7 @@ public:
            
         else if (e.type == SDL_KEYDOWN)
           {
-            std::cout << "Pressed " << SDL_GetKeyName(e.key.keysym.sym) << " down \n";
+            // std::cout << "Pressed " << SDL_GetKeyName(e.key.keysym.sym) << " down \n";
             auto found = key_map_.find(e.key.keysym.sym);
             if (found != key_map_.end())
               {

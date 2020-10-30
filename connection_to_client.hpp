@@ -20,7 +20,7 @@ class connection_to_client : public std::enable_shared_from_this<connection_to_c
 {
 public:
   connection_to_client(asio::io_context& io_context, int id,
-                       std::queue<owned_player_action>& incoming_message_queue, std::set<std::shared_ptr<connection_to_client>>& connections)
+                       std::queue<owned_player_action>& incoming_message_queue, std::vector<std::shared_ptr<connection_to_client>>& connections)
     : io_context_(io_context), socket_(io_context), incoming_message_queue_(incoming_message_queue), id_(id), connections_(connections)
   {
     msg_received_.body.resize(BYTES_TO_RECEIVE); // Make BYTES_TO_RECEIVE bytes available to be received.
@@ -38,26 +38,50 @@ public:
 
   void write_to_client(game g)
   {
-    std::stringstream ss;
-    {
-      boost::archive::text_oarchive oa(ss);
-      oa & g;
-    }
+    auto self(shared_from_this());
+    asio::post(io_context_, [this, g, self]()
+                            {
+                              std::stringstream ss;
+                              {
+                                boost::archive::text_oarchive oa(ss);
+                                oa & g;
+                              }
 
-    std::string str_to_send = ss.str();
+                              std::string str_to_send = ss.str();
 
-    s_message msg;
-    if (msg.set_header(str_to_send.size()))
-      {
-        bool write_in_progress = !outgoing_message_queue_.empty();
-        msg.body = str_to_send;
-        outgoing_message_queue_.push(msg);
-        if (!write_in_progress)
-          {
-            do_write_to_client();
-          }
-      }
+                              s_message msg;
+                              if (msg.set_header(str_to_send.size()))
+                                {
+                                  bool write_in_progress = !outgoing_message_queue_.empty();
+                                  msg.body = str_to_send;
+                                  outgoing_message_queue_.push(msg);
+                                  if (!write_in_progress)
+                                    {
+                                      do_write_to_client();
+                                    }
+                                }
+                            });
+  }
 
+
+
+  int id()
+  {
+    return id_;
+  }
+
+  bool is_connected()
+  {
+    return socket_.is_open();
+  }
+
+  void close()
+  {
+    auto self(shared_from_this());
+    asio::post(io_context_, [this, self] ()
+                            {
+                              socket_.close();
+                            });
   }
   
 private:
@@ -79,8 +103,7 @@ private:
                        else
                          {
                            std::cout << "do_read_from_client: " << ec.message() << "\n";
-                           // remove_client();
-                           connections_.erase(shared_from_this());
+                           close();
                          }
                      });
   }
@@ -93,8 +116,9 @@ private:
 
   void do_send_header()
   {
+    auto self(shared_from_this());
     asio::async_write(socket_, asio::buffer(outgoing_message_queue_.front().header, outgoing_message_queue_.front().header.size()),
-                      [this] (const asio::error_code& ec, std::size_t bytes_transferred)
+                      [this, self] (const asio::error_code& ec, std::size_t bytes_transferred)
                       {
                         if (!ec)
                           {
@@ -103,15 +127,16 @@ private:
                         else
                           {
                             std::cout << "do_write_to_client: " << ec.message() << "\n";
-                            //do_disconnect_from_client();
+                            close();
                           }
                       });
   }
 
   void do_send_body()
   {
+    auto self(shared_from_this());
     asio::async_write(socket_, asio::buffer(outgoing_message_queue_.front().body, outgoing_message_queue_.front().header_n),
-                      [this] (const asio::error_code& ec, std::size_t bytes_transferred)
+                      [this, self] (const asio::error_code& ec, std::size_t bytes_transferred)
                       {
                         if (!ec)
                           {
@@ -124,7 +149,7 @@ private:
                         else
                           {
                             std::cout << "do_write_to_client: " << ec.message() << "\n";
-                            //do_disconnect_from_client();
+                            close();
                           }
                       });
   }
@@ -138,7 +163,7 @@ private:
   // The socket to 
   asio::ip::tcp::socket socket_;
 
-  std::set<std::shared_ptr<connection_to_client>>& connections_;
+  std::vector<std::shared_ptr<connection_to_client>>& connections_;
   
   // Acts as a buffer for reading data sent from a client.
   s_message msg_received_;

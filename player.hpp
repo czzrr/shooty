@@ -13,6 +13,8 @@
 const double PI = 3.141592653589793238463;
 const double DEG_TO_RAD = PI / 180.0;
 
+enum class player_action : uint8_t { up, down, left, right, rotate_left, rotate_right, fire_bullet };
+
 class player
 {
 public:
@@ -22,51 +24,89 @@ public:
   template<class Archive>
   void serialize(Archive& ar, const unsigned int version)
   {
-    ar & x_;
-    ar & y_;
+    ar & pos_.x;
+    ar & pos_.y;
     ar & bullets_;
   }
   
   player() { }
   
-  player(int x, int y, int id): x_(x), y_(y), id_(id) { }
-
-  int get_x()
-  {
-    return x_;
+  player(int x, int y, int id) {
+    pos_ = {x, y};
+    id_ = id;
   }
 
-  int get_y()
+  int id() const
   {
-    return y_;
+    return id_;
+  }
+  
+  point get_pos()
+  {
+    return pos_;
   }
 
+  void do_action(player_action pa)
+  {
+    switch (pa)
+      {
+      case player_action::up:
+        move_up();
+        break;
+
+      case player_action::down:
+        move_down();
+        break;
+        
+      case player_action::left:
+        move_left();        
+        break;
+        
+      case player_action::right:
+        move_right();
+        break;
+        
+      case player_action::fire_bullet:
+        fire();
+        break;
+        
+      case player_action::rotate_left:
+        rotate_left();
+        break;
+        
+      case player_action::rotate_right:
+        rotate_right();
+        break;
+      }
+  }
+  
   void move_up()
   {
-    int new_y = y_ - dy_;
+    int new_y = pos_.y - vel_s.dy;
     if (new_y >= 0)
-      y_ = new_y;
+      pos_.y = new_y;
   }
 
   void move_down()
   {
-    int new_y = y_ + dy_;
+    int new_y = pos_.y + vel_s.dy;
     if (new_y + PLAYER_SIDE < SCREEN_HEIGHT)
-      y_ = new_y;
+      pos_.y = new_y;
+    
   }
 
   void move_left()
   {
-    int new_x = x_ - dx_;
+    int new_x = pos_.x - vel_s.dx;
     if (new_x >= 0)
-      x_ = new_x;
+      pos_.x = new_x;
   }
 
   void move_right()
   {
-    int new_x = x_ + dx_;
+    int new_x = pos_.x + vel_s.dx;
     if (new_x + PLAYER_SIDE < SCREEN_WIDTH)
-      x_ += dx_;
+      pos_.x = new_x;
   }
 
   void fire()
@@ -76,25 +116,21 @@ public:
       {
         last_time_fired_ = ticks;
             
-        double rx = 4 * cos(dir_ * DEG_TO_RAD);
-        double ry = 4 * sin(dir_ * DEG_TO_RAD);
-        bullets_.push_back(bullet(x_, y_, rx, ry));
+        int ball_dx = static_cast<int>(std::round(4 * cos(dir_ * DEG_TO_RAD)));
+        int ball_dy = static_cast<int>(std::round(4 * sin(dir_ * DEG_TO_RAD)));
+        bullets_.push_back(bullet(pos_.x, pos_.y, ball_dx, ball_dy));
       }
 
   }
 
   void rotate_left()
   {
-    dir_ -= ddir_;
-    // if (dir_ > 360.0)
-    //   dir_ -= 360.0;
+    dir_ -= ddir_s;
   }
 
   void rotate_right()
   {
-    dir_ += ddir_;
-    // if (dir_ < -360.0)
-    //   dir_ += 360.0;
+    dir_ += ddir_s;
   }
   
   std::vector<bullet>& get_bullets()
@@ -105,18 +141,19 @@ public:
 private:
 
   uint32_t last_time_fired_ = SDL_GetTicks();
-  double dir_ = 0;
-  double ddir_ = 2.0;
-  int id_;
-  int x_;
-  int y_;
-  int dx_ = 5;
-  int dy_ = 5;
 
+  point pos_;
+  int id_;
   std::vector<bullet> bullets_;
+  double dir_ = 0;
+  
+  static constexpr double ddir_s = 2.0;
+  static constexpr velocity vel_s = {5, 5};
+  
+  
 };
 
-enum class player_action : uint8_t { up, down, left, right, rotate_left, rotate_right, fire_bullet };
+
 
 std::string get_player_action_str(player_action action)
 {
@@ -138,6 +175,7 @@ std::string get_player_action_str(player_action action)
   }
 }
 
+// This can be a struct instead.
 class owned_player_action
 {
 public:
@@ -157,5 +195,14 @@ private:
   int id_;
   player_action action_;
 };
+
+// Like this:
+// struct owned_player_action
+// {
+//   owned_player_action(player_action pa, int pid): action(pa), id(pid) { }
+
+//   int id;
+//   player_action action;
+// };
 
 #endif
