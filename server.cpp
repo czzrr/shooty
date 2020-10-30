@@ -40,34 +40,51 @@ public:
           {
             connection->write_to_client(gs);
           }
-        else
+        else 
           {
             invalid_clients = true;
-            connection.reset();
+
+            // Remove player and connection since connection to client is gone.
+            // Happens when a client has closed the window.
+            game_.remove_player(connection->id());
+            connection.reset(); // Release pointer's ownership of object pointed to (makes the pointer nullptr).
           }
       }
 
+    // Remove disconnected clients.
     if (invalid_clients)
       connections_.erase(std::remove(connections_.begin(), connections_.end(),  nullptr), connections_.end());
   }
-  
+
+  // Remove player from game and connection by id.
+  // Happens when some async task failed or player died.
   void disconnect_from_client(int id)
   {
-    for (auto conn : connections_)
+    for (auto& conn : connections_)
       {
         if (conn->id() == id)
           {
-            disconnect_from_client(conn);
+            game_.remove_player(id);
+            conn->close();
+            connections_.erase(
+                               std::remove_if(connections_.begin(), connections_.end(),
+                                              [id](std::shared_ptr<connection_to_client> c) { return c->id() == id; }),
+                               connections_.end());
+            break;
           }
       }
+
+    
+
   }
   
 private:
-  void disconnect_from_client(std::shared_ptr<connection_to_client> conn)
-  {
-    game_.remove_player(conn->id());
-    connections_.erase(std::remove(connections_.begin(), connections_.end(), conn), connections_.end());
-  }
+  // void disconnect_from_client(std::shared_ptr<connection_to_client>& conn)
+  // {
+  //   conn->close();
+  //   game_.remove_player(conn->id());
+  //   connections_.erase(std::remove(connections_.begin(), connections_.end(), conn), connections_.end());
+  // }
 
  
   
@@ -131,6 +148,7 @@ int main()
           //std::cout << opa.get_id() << ":" << get_player_action_str(opa.get_action()) << "\n";
           if (!g.do_action(opa.get_id(), opa.get_action()))
             {
+              std::cout << "player " << opa.get_id() << " not found\n";
               srv.disconnect_from_client(opa.get_id());
             }
           incoming_msgs.pop();
