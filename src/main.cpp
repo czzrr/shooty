@@ -1,32 +1,40 @@
+#include <iostream>
+#include <thread>
+#include <chrono>
+
+#include "Server.hpp"
+#include "Game.hpp"
+
 int main()
 {
-  game g;
+  Game game;
   
-  asio::io_context io_context;
+  asio::io_context ioContext;
   unsigned int port = 60000;
-  server srv(io_context, port, g);
-  std::thread t([&]() { io_context.run(); });
+  Server<Game> server(ioContext, port);
+  std::thread t([&]() { ioContext.run(); });
   
-  srv.writeToAll(g);
-  std::queue<owned_player_action>& incoming_msgs = srv.incoming();
+  server.writeToAll(game);
+  std::queue<OwnedMessage<Game>>& incomingMsgs = server.getIncomingMsgs();
   while(true)
     {
       // If any incoming messages, update game state according to them
-      while (!incoming_msgs.empty())
+      while (!incomingMsgs.empty())
         {
-          owned_player_action opa = incoming_msgs.front();
-          //std::cout << opa.get_id() << ":" << get_player_action_str(opa.get_action()) << "\n";
-          if (!g.do_action(opa.get_id(), opa.get_action()))
+          OwnedMessage<Game> ownedMessage = incomingMsgs.front();
+          uint32 id = ownedMessage.getID();
+          Action action = messageToAction(ownedMessage.getMessage());
+          if (!game.performAction(id, action))
             {
-              std::cout << "player " << opa.get_id() << " not found\n";
-              srv.disconnect_from_client(opa.get_id());
+              std::cout << "player " << id << " not found\n";
+              server.disconnect(id);
             }
-          incoming_msgs.pop();
+          incomingMsgs.pop();
         }
       
-      g.advance();
-      srv.writeToAll(g);
-      SDL_Delay(1000 / FRAMES_PER_SECOND);
+      game.advance(); // Advance to next game state
+      server.writeToAll(game);
+      std::this_thread::sleep_for((1000 / FRAMES_PER_SECOND)ms);
     }
 
   

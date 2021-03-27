@@ -1,22 +1,25 @@
 #ifndef PLAYER_H
 #define PLAYER_H
 
-#include "SDL.h"
-
-#include "bullet.hpp"
 #include <cmath>
-
-#include "constants.hpp"
-
 #include <boost/serialization/vector.hpp>
 
-const double PI = 3.141592653589793238463;
-const double DEG_TO_RAD = PI / 180.0;
+#include "Point.hpp"
+#include "Velocity.hpp"
+#include "Bullet.hpp"
+#include "Constants.hpp"
 
-enum class player_action : uint8_t { up, down, left, right, rotate_left, rotate_right, fire_bullet };
+enum class PlayerAction : uint8_t { Up, Down, Left, Right, RotateLeft, RotateRight, FireBullet };
 
-class player
-{
+class Player {
+  uint32_t id_;
+  Point pos_:
+  Velocity vel_ = Velocity(5, 5);
+  std::vector<Bullet> bullets_;
+  double dir_ = 0;
+  
+  static const double dAngle = 2.0;
+  
 public:
 
   // For (de)serialization.
@@ -24,185 +27,133 @@ public:
   template<class Archive>
   void serialize(Archive& ar, const unsigned int version)
   {
-    ar & pos_.x;
-    ar & pos_.y;
+    ar & x;
+    ar & y;
     ar & bullets_;
   }
   
-  player() { }
+  player() = delete;
   
   player(int x, int y, int id) {
-    pos_ = {x, y};
+    pos_ = Point(x, y);
     id_ = id;
   }
 
-  int id() const
+  int getID() const
   {
     return id_;
   }
   
-  point get_pos()
+  Point getPos()
   {
     return pos_;
   }
 
-  void do_action(player_action pa)
+  void performAction(PlayerAction playerAction)
   {
-    switch (pa)
+    switch (playerAction)
       {
-      case player_action::up:
-        move_up();
+      case PlayerAction::up:
+        moveUp();
         break;
 
-      case player_action::down:
-        move_down();
+      case PlayerAction::down:
+        moveDown();
         break;
         
-      case player_action::left:
-        move_left();        
+      case PlayerAction::left:
+        moveLeft();        
         break;
         
-      case player_action::right:
-        move_right();
+      case PlayerAction::right:
+        moveRight();
         break;
         
-      case player_action::fire_bullet:
+      case PlayerAction::fire_bullet:
         fire();
         break;
         
-      case player_action::rotate_left:
-        rotate_left();
+      case PlayerAction::rotate_left:
+        rotateLeft();
         break;
         
-      case player_action::rotate_right:
-        rotate_right();
+      case PlayerAction::rotate_right:
+        rotateRight();
         break;
       }
   }
   
-  void move_up()
+  void moveUp()
   {
-    int new_y = pos_.y - vel_s.dy;
-    if (new_y >= 0)
-      pos_.y = new_y;
+    int newY = pos_.getY() - vel_.getDy();
+    if (newY >= 0)
+      pos_.setY(newY);
   }
 
-  void move_down()
+  void moveDown()
   {
-    int new_y = pos_.y + vel_s.dy;
-    if (new_y + PLAYER_SIDE < SCREEN_HEIGHT)
-      pos_.y = new_y;
+    int newY = pos_.getY() + vel_.getDy;
+    if (newY + PLAYER_SIDE < SCREEN_HEIGHT)
+      pos_.setY(newY);
     
   }
 
-  void move_left()
+  void moveLeft()
   {
-    int new_x = pos_.x - vel_s.dx;
-    if (new_x >= 0)
-      pos_.x = new_x;
+    int newX = pos.getX() - vel_.getDx;
+    if (newX >= 0)
+      pos_.setX(newX);
   }
 
-  void move_right()
+  void moveRight()
   {
-    int new_x = pos_.x + vel_s.dx;
-    if (new_x + PLAYER_SIDE < SCREEN_WIDTH)
-      pos_.x = new_x;
+    int newX = pos_.getX() + vel_.getDx();
+    if (newX + PLAYER_SIDE < SCREEN_WIDTH)
+      pos_.setX(newX);
   }
 
   void fire()
   {
-    uint32_t ticks = SDL_GetTicks();
-    if (ticks - last_time_fired_ > 200)
-      {
-        last_time_fired_ = ticks;
-            
-        int ball_dx = static_cast<int>(std::round(4 * cos(dir_ * DEG_TO_RAD)));
-        int ball_dy = static_cast<int>(std::round(4 * sin(dir_ * DEG_TO_RAD)));
-        bullets_.push_back(bullet(pos_.x, pos_.y, ball_dx, ball_dy));
-      }
+    int dx = static_cast<int>(std::round(4 * cos(dir_ * DEG_TO_RAD)));
+    int dy = static_cast<int>(std::round(4 * sin(dir_ * DEG_TO_RAD)));
+    bullets_.push_back(bullet(pos_.getX(), pos_.getY(), dx, dy));
 
   }
 
-  void rotate_left()
+  void rotateLeft()
   {
-    dir_ -= ddir_s;
+    angle_ -= dAngle_;
   }
 
-  void rotate_right()
+  void rotateRight()
   {
-    dir_ += ddir_s;
+    angle_ += dAngle_;
   }
   
-  std::vector<bullet>& get_bullets()
+  std::vector<bullet>& getBullets()
   {
     return bullets_;
   }
-  
-private:
-
-  uint32_t last_time_fired_ = SDL_GetTicks();
-
-  point pos_;
-  int id_;
-  std::vector<bullet> bullets_;
-  double dir_ = 0;
-  
-  static constexpr double ddir_s = 2.0;
-  static constexpr velocity vel_s = {5, 5};
-  
-  
 };
 
 
 
-std::string get_player_action_str(player_action action)
+std::string playerActionToStr(PlayerAction action)
 {
   switch (action) {
-  case player_action::up:
+  case PlayerAction::up:
     return "up";
-  case player_action::left:
+  case PlayerAction::left:
     return "left";
-  case player_action::down:
+  case PlayerAction::down:
     return "down";
-  case player_action::right:
+  case PlayerAction::right:
     return "right";
-  case player_action::rotate_left:
+  case PlayerAction::rotate_left:
     return "rotate_left";
-  case player_action::rotate_right:
+  case PlayerAction::rotate_right:
     return "rotate_right";
-  case player_action::fire_bullet:
+  case PlayerAction::fire_bullet:
     return "fire_bullet";
   }
 }
-
-// This can be a struct instead.
-class owned_player_action
-{
-public:
-  owned_player_action(player_action action, int id): action_(action), id_(id) { }
-
-  int get_id()
-  {
-    return id_;
-  }
-  
-  player_action get_action()
-  {
-    return action_;
-  }
-  
-private:    
-  int id_;
-  player_action action_;
-};
-
-// Like this:
-// struct owned_player_action
-// {
-//   owned_player_action(player_action pa, int pid): action(pa), id(pid) { }
-
-//   int id;
-//   player_action action;
-// };
-
-#endif

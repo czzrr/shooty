@@ -18,38 +18,38 @@ auto const key_rotate_left = SDLK_LEFT;
 auto const key_rotate_right = SDLK_RIGHT;
 
 // Map key code to player action.
-player_action key_code_to_player_action(SDL_Keycode key_code)
+PlayerAction keyCodeToPlayerAction(SDL_Keycode keyCode)
 {
-  switch (key_code)
+  switch (keyCode)
     {
-    case key_up:
-      return player_action::up;
+    case keyUp:
+      return PlayerAction::Up;
 
-    case key_down:
-      return player_action::down;
+    case keyDown:
+      return PlayerAction::Down;
       
-    case key_left:
-      return player_action::left;
+    case keyLeft:
+      return PlayerAction::Left;
       
-    case key_right:
-      return player_action::right;
+    case keyRight:
+      return PlayerAction::Right;
 
-    case key_fire:
-      return player_action::fire_bullet;
+    case keyFire:
+      return PlayerAction::FireBullet;
 
-    case key_rotate_left:
-      return player_action::rotate_left;
+    case keyRotateLeft:
+      return PlayerAction::RotateLeft;
 
-    case key_rotate_right:
-      return player_action::rotate_right;
+    case keyRotateRight:
+      return PlayerAction::RotateRight;
     }
 }
 
 // This class handles player input, reads incoming game states from the server and tells the game drawer to draw.
-class game_controller
+class GameController
 {
 public:
-  game_controller(client& c): client_(c)
+  GameController(Client& c): Client_(c)
   {
 
   }
@@ -57,17 +57,16 @@ public:
   // Start the controller.
   void start()
   {
-    std::queue<game>& incoming_games = client_.get_incoming_games();
+    std::queue<OwnedMessage<GameMessage>>& incomingMsgs = Client_.getIncomingMsgs();
     while (!quit_)
       {
         // Break out of loop if connection to server is lost.
-        if (!client_.is_connected())
+        if (!client_.isConnected())
           {
             break;
           }
         
-        // If the server sent game states, draw them.
-        while (!incoming_games.empty())
+        while (!incomingMsgs.empty())
           {
             game g = incoming_games.front();
             incoming_games.pop();
@@ -77,8 +76,8 @@ public:
         SDL_Delay(1000 / FRAMES_PER_SECOND);
         handle_key_events();
       }
-    if (client_.is_connected())
-      client_.disconnect_from_server();
+    if (Client_.is_connected())
+      Client_.disconnect_from_server();
     // Terminate SDL.
     game_drawer_.close();
   }
@@ -120,7 +119,7 @@ public:
       {
         if (is_down)
           {
-            client_.write_to_server(key_code_to_player_action(key_code));
+            Client_.write_to_server(key_code_to_player_action(key_code));
           }
       }
   }
@@ -131,7 +130,7 @@ private:
   std::map<SDL_Keycode, bool> key_map_ = {{key_up, false}, {key_down, false}, {key_left, false}, {key_right, false},
                                           {key_fire, false}, {key_rotate_left, false}, {key_rotate_right, false}};
   bool quit_ = false;
-  client& client_;
+  Client& Client_;
 
   game_drawer game_drawer_;
   };
