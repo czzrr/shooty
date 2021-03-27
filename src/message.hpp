@@ -1,43 +1,33 @@
 #ifndef MESSAGE_H
 #define MESSAGE_H
 
-struct s_message
-{
+#include <vector>
+#include <cstring>
 
-  s_message()
-  {
-    header.resize(4);
+template <typename T>
+class Message {
+  T messageId_;
+  std::vector<uint8_t> body_;
+
+public:
+  void setMessageId(T messageId) {
+    messageId_ = messageId;
+  }
+
+  template<typename BodyData>
+  void setData(BodyData data) {
+    size_t size = sizeof(data);
+    body_.resize(size);
+    std::memcpy(body_.data(), &data, size);
+  }
+
+  template <typename BodyData>
+  BodyData getData() {
+    BodyData data;
+    std::memcpy(&data, body_.data(), body_.size());
+    return data;
   }
   
-  bool set_header(int n)
-  {
-    // Length of header must be between 1 and 9999 inclusive.
-    if (n < 1 || n > 9999)
-      return false;
-
-    header = std::to_string(n);
-
-    // Pad with leading zeros so the header consists of 4 characters.
-    std::string zeros;
-    for (int i = 4 - header.size(); i > 0; i--)
-      zeros += "0";
-    zeros += header;
-    header = zeros;
-
-    header_n = n;
-    body.resize(header_n);
-    
-    return true;
-  }
-
-  static int parse_header(std::string h)
-  {
-    return std::stoi(h);
-  }
-
-  int header_n;
-  std::string header;
-  std::string body;
 };
   
 #endif

@@ -1,74 +1,80 @@
+#ifndef SERVER_H
+#define SERVER_H
+
 #include <iostream>
-#include <memory>
-#include "asio.hpp"
+#include <set>
 #include <queue>
+
+#include "asio.hpp"
+
+#include "Connection.hpp"
+#include "Message.hpp"
 #include "player.hpp"
 #include "game.hpp"
-#include "message.hpp"
-#include <set>
 
-
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
-
-#include "SDL.h"
-
-#include "constants.hpp"
-#include "connection_to_client.hpp"
-
-class server
-{
+// A single-threaded server
+template <typename T>
+class Server {
+  int uid_ = 0;
+  
+  asio::io_context& ioContext_;
+  // For accepting connections.
+  asio::ip::tcp::acceptor acceptor_;
+  
+  // The server's connections to clients.
+  std::vector<std::shared_ptr<Connection<T>>> connections_;
+  std::queue<OwnedMessage<T>> incomingMsgs_;
+  
 public:
-  server(asio::io_context& io_context, unsigned int port, game& g)
-    : io_context_(io_context), acceptor_(io_context, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), port)), game_(g)
+  server(asio::io_context& ioContext, unsigned int port)
+    : ioContext_(ioContext), acceptor_(ioContext, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), port))
   {
     std::cout << "Server listening on port " << port << "\n";
-    do_listen_for_client_connections();
+    listenForConnections();
   }
 
-  std::queue<owned_player_action>& incoming()
+  std::queue<Message<T>>& getIncomingMsgs()
   {
-    return incoming_message_queue_;
+    return incomingMsgs_;
   }
 
-  void write_to_clients(game gs)
+  void writeToAll(Message<T> msg)
   {
-    bool invalid_clients = false;
+    bool invalidClients = false;
     for (auto& connection : connections_)
       {
-        if (connection->is_connected())
+        if (connection->isConnected())
           {
-            connection->write_to_client(gs);
+            connection->write(msg);
           }
         else 
           {
-            invalid_clients = true;
-
-            // Remove player and connection since connection to client is gone.
-            // Happens when a client has closed the window.
-            game_.remove_player(connection->id());
+            invalidClients = true;
             connection.reset(); // Release pointer's ownership of object pointed to (makes the pointer nullptr).
           }
       }
 
-    // Remove disconnected clients.
-    if (invalid_clients)
+    // Remove disconnected clients, if any
+    if (invalidClients)
       connections_.erase(std::remove(connections_.begin(), connections_.end(),  nullptr), connections_.end());
+    // The call to std::remove shifts all non-null connections to the beginning and returns an iterator
+    // that is one past the end of these. std::erase then deletes the elements between this iterator
+    // and the end, eliminating all null connections.
   }
 
   // Remove player from game and connection by id.
   // Happens when some async task failed or player died.
-  void disconnect_from_client(int id)
+  void disconnect(int id)
   {
-    for (auto& conn : connections_)
+    for (auto& connection : connections_)
       {
-        if (conn->id() == id)
+        if (connection->getID() == id)
           {
-            game_.remove_player(id);
-            conn->close();
+            connection->close();
             connections_.erase(
                                std::remove_if(connections_.begin(), connections_.end(),
-                                              [id](std::shared_ptr<connection_to_client> c) { return c->id() == id; }),
+                                              [id](std::shared_ptr<Connection<T>> c)
+                                              { return c->getID() == id; }),
                                connections_.end());
             break;
           }
@@ -79,86 +85,35 @@ public:
   }
   
 private:
-  // void disconnect_from_client(std::shared_ptr<connection_to_client>& conn)
-  // {
-  //   conn->close();
-  //   game_.remove_player(conn->id());
-  //   connections_.erase(std::remove(connections_.begin(), connections_.end(), conn), connections_.end());
-  // }
-
  
-  
-  void do_listen_for_client_connections()
+  void listenForConnections()
   {
-    std::shared_ptr<connection_to_client> new_connection =
-      std::make_shared<connection_to_client>(io_context_, uid_, incoming_message_queue_, connections_);
+    // The next connection that is accepted, which takes the io context as argument so it can create a socket
+    // that is listened to.
+    std::shared_ptr<connection<T>> connection =
+      std::make_shared<connection<T>>(ioContext, incomingMsgs_, connections_, ConnectionOwner::Server);
 
-    acceptor_.async_accept(new_connection->socket(), [this, new_connection](const asio::error_code& ec)
+    // The acceptor accepts connections that connect to the given port.
+    // When a connection is established via the socket, the handler is called.
+    acceptor_.async_accept(connection->socket(), [this, connection](const asio::error_code& ec)
                            {
                              if (!ec)
                                {
-                                 std::cout << "[Client connected] " << new_connection->socket().remote_endpoint() << "\n";
-                                 connections_.push_back(std::move(new_connection));
-                                 new_connection->start();
-                                 //std::cout << "player assigned id " << uid_ << "\n";
-                                 game_.add_player(uid_++);
+                                 std::cout << "[Client connected] " << connection->socket().remote_endpoint() << "\n";
+                                 connection_.connectToClient(id_++); // Give connection an ID and start reading messages
+                                 connections_.push_back(std::move(connection));
                                }
                              else
                                {
                                  std::cout << ec.message() << "\n";
                                }
-                             do_listen_for_client_connections();
+                             // Keep listening for connections
+                             listenForConnections();
                            });
   }
 
   
-  int uid_ = 0;
 
-  game& game_;
-  
-  asio::io_context& io_context_;
-
-  // For accepting connections.
-  asio::ip::tcp::acceptor acceptor_;
-  
-  // The server's connections to clients.
-  std::vector<std::shared_ptr<connection_to_client>> connections_;
-
-  // Incoming messages from clients to server.
-  std::queue<owned_player_action> incoming_message_queue_;
 };
 
-int main()
-{
-  game g;
-  
-  asio::io_context io_context;
-  unsigned int port = 60000;
-  server srv(io_context, port, g);
-  std::thread t([&]() { io_context.run(); });
-  
-  srv.write_to_clients(g);
-  std::queue<owned_player_action>& incoming_msgs = srv.incoming();
-  while(true)
-    {
-      // If any incoming messages, update game state according to them
-      while (!incoming_msgs.empty())
-        {
-          owned_player_action opa = incoming_msgs.front();
-          //std::cout << opa.get_id() << ":" << get_player_action_str(opa.get_action()) << "\n";
-          if (!g.do_action(opa.get_id(), opa.get_action()))
-            {
-              std::cout << "player " << opa.get_id() << " not found\n";
-              srv.disconnect_from_client(opa.get_id());
-            }
-          incoming_msgs.pop();
-        }
-      
-      g.advance();
-      srv.write_to_clients(g);
-      SDL_Delay(1000 / FRAMES_PER_SECOND);
-    }
-
-  
-  return 0;
-}
+#endif
