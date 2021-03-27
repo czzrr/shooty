@@ -5,6 +5,9 @@ class Velocity {
   int dx_;
   int dy_;
 
+public:
+  Velocity() {}
+  
   Velocity(int dx, int dy) {
     dx_ = dx;
     dy_ = dy;
@@ -18,12 +21,12 @@ class Velocity {
     return dy_;
   }
 
-  void setDx(int x) {
-    x_ = dx;
+  void setDx(int dx) {
+    dx_ = dx;
   }
 
-  void setDy(int y) {
-    y_ = dy;
+  void setDy(int dy) {
+    dy_ = dy;
   }
   
 };

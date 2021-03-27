@@ -13,12 +13,12 @@ enum class PlayerAction : uint8_t { Up, Down, Left, Right, RotateLeft, RotateRig
 
 class Player {
   uint32_t id_;
-  Point pos_:
-  Velocity vel_ = Velocity(5, 5);
+  Point pos_;
   std::vector<Bullet> bullets_;
-  double dir_ = 0;
-  
-  static const double dAngle = 2.0;
+  double angle_ = 0;
+
+  Velocity vel_ = Velocity(5, 5);
+  static constexpr double dAngle_ = 2.0;
   
 public:
 
@@ -27,25 +27,23 @@ public:
   template<class Archive>
   void serialize(Archive& ar, const unsigned int version)
   {
-    ar & x;
-    ar & y;
+    ar & pos_.getX();
+    ar & pos_.getY();
     ar & bullets_;
   }
   
-  player() = delete;
+  Player() = delete;
   
-  player(int x, int y, int id) {
+  Player(int x, int y, int id) {
     pos_ = Point(x, y);
     id_ = id;
   }
 
-  int getID() const
-  {
+  int getID() const {
     return id_;
   }
   
-  Point getPos()
-  {
+  Point getPos() const {
     return pos_;
   }
 
@@ -53,31 +51,31 @@ public:
   {
     switch (playerAction)
       {
-      case PlayerAction::up:
+      case PlayerAction::Up:
         moveUp();
         break;
 
-      case PlayerAction::down:
+      case PlayerAction::Down:
         moveDown();
         break;
         
-      case PlayerAction::left:
+      case PlayerAction::Left:
         moveLeft();        
         break;
         
-      case PlayerAction::right:
+      case PlayerAction::Right:
         moveRight();
         break;
         
-      case PlayerAction::fire_bullet:
+      case PlayerAction::FireBullet:
         fire();
         break;
         
-      case PlayerAction::rotate_left:
+      case PlayerAction::RotateLeft:
         rotateLeft();
         break;
         
-      case PlayerAction::rotate_right:
+      case PlayerAction::RotateRight:
         rotateRight();
         break;
       }
@@ -92,7 +90,7 @@ public:
 
   void moveDown()
   {
-    int newY = pos_.getY() + vel_.getDy;
+    int newY = pos_.getY() + vel_.getDy();
     if (newY + PLAYER_SIDE < SCREEN_HEIGHT)
       pos_.setY(newY);
     
@@ -100,7 +98,7 @@ public:
 
   void moveLeft()
   {
-    int newX = pos.getX() - vel_.getDx;
+    int newX = pos_.getX() - vel_.getDx();
     if (newX >= 0)
       pos_.setX(newX);
   }
@@ -114,9 +112,9 @@ public:
 
   void fire()
   {
-    int dx = static_cast<int>(std::round(4 * cos(dir_ * DEG_TO_RAD)));
-    int dy = static_cast<int>(std::round(4 * sin(dir_ * DEG_TO_RAD)));
-    bullets_.push_back(bullet(pos_.getX(), pos_.getY(), dx, dy));
+    int dx = static_cast<int>(std::round(4 * cos(angle_ * DEG_TO_RAD)));
+    int dy = static_cast<int>(std::round(4 * sin(angle_ * DEG_TO_RAD)));
+    bullets_.push_back(Bullet(pos_.getX(), pos_.getY(), dx, dy));
 
   }
 
@@ -130,7 +128,7 @@ public:
     angle_ += dAngle_;
   }
   
-  std::vector<bullet>& getBullets()
+  std::vector<Bullet>& getBullets()
   {
     return bullets_;
   }
@@ -141,19 +139,21 @@ public:
 std::string playerActionToStr(PlayerAction action)
 {
   switch (action) {
-  case PlayerAction::up:
+  case PlayerAction::Up:
     return "up";
-  case PlayerAction::left:
+  case PlayerAction::Left:
     return "left";
-  case PlayerAction::down:
+  case PlayerAction::Down:
     return "down";
-  case PlayerAction::right:
+  case PlayerAction::Right:
     return "right";
-  case PlayerAction::rotate_left:
+  case PlayerAction::RotateLeft:
     return "rotate_left";
-  case PlayerAction::rotate_right:
+  case PlayerAction::RotateRight:
     return "rotate_right";
-  case PlayerAction::fire_bullet:
+  case PlayerAction::FireBullet:
     return "fire_bullet";
   }
 }
+
+#endif

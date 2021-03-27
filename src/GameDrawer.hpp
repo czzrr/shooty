@@ -1,41 +1,43 @@
-#ifndef GAME_DRAWER_H
-#define GAME_DRAWER_H
+#ifndef GAMEDRAWER_H
+#define GAMEDRAWER_H
 
-#include "game.hpp"
+#include "Game.hpp"
+#include "Constants.hpp"
 
-#include "constants.hpp"
-
-class game_drawer
-{
+class GameDrawer {
+  SDL_Window* window_ = nullptr;
+  SDL_Renderer* renderer_ = nullptr;
+  bool isInitialized_ = false;
+  
 public:
-  game_drawer()
+  GameDrawer()
   {
     init();
   }
 
-  bool is_init()
+  bool isInit()
   {
-    return is_initialized_;
+    return isInitialized_;
   }
   
-  void draw_game(game game_)
+  void drawGame(Game game_)
   {
     SDL_SetRenderDrawColor(renderer_, 0x00, 0x00, 0x00, 0x00);
     SDL_RenderClear(renderer_);
 
     SDL_SetRenderDrawColor(renderer_, 0xFF, 0x00, 0x00, 0xFF);
     
-    for (auto [_, player] : game_.get_players())
+    for (auto [_, player] : game_.getPlayers())
       {
-        point ppos = player.get_pos();
-        SDL_Rect player_rect = { ppos.x, ppos.y, PLAYER_SIDE, PLAYER_SIDE };
-        SDL_RenderFillRect(renderer_, &player_rect);
+        Point playerPos = player.getPos();
+        SDL_Rect playerRect = { playerPos.getX(), playerPos.getY(), PLAYER_SIDE, PLAYER_SIDE };
+        SDL_RenderFillRect(renderer_, &playerRect);
 
-        for (auto bullet : player.get_bullets())
+        for (auto bullet : player.getBullets())
           {
-            point bpos = bullet.get_pos();
-            SDL_Rect bullet_rect = { bpos.x, bpos.y, BULLET_SIDE, BULLET_SIDE };
-            SDL_RenderFillRect(renderer_, &bullet_rect);
+            Point bulletPos = bullet.getPos();
+            SDL_Rect bulletRect = { bulletPos.getX(), bulletPos.getY(), BULLET_SIDE, BULLET_SIDE };
+            SDL_RenderFillRect(renderer_, &bulletRect);
           }
       }
 
@@ -74,12 +76,9 @@ private:
         return;
       }
 
-    is_initialized_ = true;
+    isInitialized_ = true;
   }
 
-  SDL_Window* window_ = nullptr;
-  SDL_Renderer* renderer_ = nullptr;
-  bool is_initialized_ = false;
 };
 
 #endif

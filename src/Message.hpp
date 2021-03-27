@@ -3,11 +3,14 @@
 
 #include <vector>
 #include <cstring>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
+#include <string>
 
 template <typename T>
 class Message {
   T messageId_;
-  std::vector<uint8_t> body_;
+  std::string body_;
 
 public:
   void setMessageId(T messageId) {
@@ -16,18 +19,24 @@ public:
 
   template<typename BodyData>
   void setData(BodyData data) {
-    size_t size = sizeof(data);
-    body_.resize(size);
-    std::memcpy(body_.data(), &data, size);
+    std::stringstream ss;
+    {
+      boost::archive::text_oarchive oa(ss);
+      oa & data;
+    }
+    body_ = ss.str();
   }
 
   template <typename BodyData>
-  BodyData getData() {
-    BodyData data;
-    std::memcpy(&data, body_.data(), body_.size());
-    return data;
+  void getData(BodyData& data) {
+    std::stringstream ss;
+    ss << body_;
+    {
+      boost::archive::text_iarchive ia(ss);
+      ia & data;
+    }
   }
   
 };
-  
+
 #endif

@@ -4,12 +4,24 @@
 #include <iostream>
 #include <vector>
 
-#include "player.hpp"
-#include "bullet.hpp"
-#include "constants.hpp"
+#include "Player.hpp"
+#include "Bullet.hpp"
+#include "Constants.hpp"
 
 #include <boost/serialization/map.hpp>
 
+
+bool isOutsideScreen(Bullet bullet) {
+  int x = bullet.getPos().getX();
+  int y = bullet.getPos().getY();
+  return x < 0 || x > SCREEN_WIDTH || y < 0 || y > SCREEN_HEIGHT;
+}
+
+bool collides(Bullet b, Player p)
+{
+  return collidesRect({b.getPos().getX(), b.getPos().getY(), BULLET_SIDE, BULLET_SIDE},
+                      {p.getPos().getY(), p.getPos().getY(), PLAYER_SIDE, PLAYER_SIDE});
+}
 
 
 class Game
@@ -42,7 +54,7 @@ public:
       }
   }
 
-  const std::map<int, player>& getPlayers()
+  const std::map<uint32_t, Player>& getPlayers()
   {
     return players_;
   }
@@ -52,7 +64,7 @@ public:
     auto found = players_.find(id);
     if (found != players_.end())
       {
-        found->second.performAction(pa);
+        found->second.performAction(playerAction);
         return true;
       }
     return false;
@@ -73,7 +85,7 @@ public:
                 // Check if current player's bullets collides with another player.
                 if (player.getID() != p.getID() && collides(b, p))
                   {
-                    playersToDelete.push_back(p.id());
+                    playersToDelete.push_back(p.getID());
                     bulletsToDelete.push_back(b);
                   }
                 // Check if bullet is outside screen.
@@ -85,31 +97,22 @@ public:
             b.move();
           }
         // Remove bullets that have collided with players or are out of screen.
-        for (bullet& b : bulletsToDelete)
-          {
-            bullets.erase(std::remove(bullets.begin(), bullets.end(), b), bullets.end());
-          }
+        for (Bullet& b : bulletsToDelete) {
+          bullets.erase(std::remove(bullets.begin(), bullets.end(), b), bullets.end());
+        }
       }
     // Remove players hit by a bullet.
     for (int id : playersToDelete)
       {
-        remove_player(id);
+        removePlayer(id);
       }
   }
   
 private:
-  std::map<int, player> players_;
+  std::map<uint32_t, Player> players_;
 };
 
 
-bool isOutsideScreen(Bullet bullet) {
-  return bullet.x < 0 || bullet.x > SCREEN_WIDTH || bullet.y < 0 || bullet.y > SCREEN_HEIGHT;
-}
 
-bool collides(Bullet b, Player p)
-{
-  return collides_rect({b.get_pos().x, b.get_pos().y, BULLET_SIDE, BULLET_SIDE},
-                       {p.get_pos().x, p.get_pos().y, PLAYER_SIDE, PLAYER_SIDE});
-}
 
 #endif

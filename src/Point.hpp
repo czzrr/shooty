@@ -5,6 +5,9 @@ class Point {
   int x_;
   int y_;
 
+public:
+  Point() {}
+  
   Point(int x, int y) {
     x_ = x;
     y_ = y;

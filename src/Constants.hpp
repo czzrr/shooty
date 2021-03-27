@@ -15,7 +15,7 @@ const double PI = 3.141592653589793238463;
 const double DEG_TO_RAD = PI / 180.0;
 
 
-bool collides_rect(SDL_Rect r1, SDL_Rect r2)
+bool collidesRect(SDL_Rect r1, SDL_Rect r2)
 {
   int left_r1 = r1.x;
   int right_r1 = r1.x + r1.w;

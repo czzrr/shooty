@@ -3,21 +3,22 @@
 
 #include "asio.hpp"
 #include "Message.hpp"
-
+#include "ConnectionOwner.hpp"
+#include "Connection.hpp"
 #include <iostream>
 #include <queue>
 
-template <typename T>
+template <typename InMsgType, typename OutMsgType>
 class Client {
   asio::io_context& ioContext_;
-  asio::ip::tcp::socket socket_;
-
-  std::queue<Message<T>> incomingMsgs_;
+  Connection<InMsgType, OutMsgType> connection_;
+  
+  std::queue<OwnedMessage<InMsgType>> incomingMsgs_;
 
  public:
   Client(asio::io_context& ioContext,
          const asio::ip::tcp::resolver::results_type& endpoints)
-      : ioContext_(ioContext), connection_(ioContext, incomingMsgs) {
+      : ioContext_(ioContext), connection_(ioContext, incomingMsgs_) {
     connection_.connectToServer(endpoints);
   }
 
@@ -25,14 +26,18 @@ class Client {
     connection_.connectToServer(ConnectionOwner::Client);
   }
   
-  std::queue<Message<T>>& getIncomingMsgs() { return incomingMsgs_; }
+  std::queue<OwnedMessage<InMsgType>>& getIncomingMsgs() { return incomingMsgs_; }
   
-  void send(Message<T> msg) {
+  void send(Message<OutMsgType> msg) {
     if (connection_.isConnected()) {
-      connection.write(msg);
+      connection_.write(msg);
     }
   }
 
+  bool isConnected() {
+    return connection_.isConnected();
+  }
+  
   void disconnect() {
     std::cout << "Client::disconnect(): Disconnecting from server\n";
     connection_.close();

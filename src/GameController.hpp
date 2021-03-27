@@ -1,21 +1,22 @@
 #ifndef GAME_CONTROLLER_H
 #define GAME_CONTROLLER_H
 
-#include "game_drawer.hpp"
-#include "client.hpp"
-#include "game.hpp"
-#include "constants.hpp"
+#include "GameDrawer.hpp"
+#include "Client.hpp"
+#include "Game.hpp"
+#include "Constants.hpp"
+#include "GameMessage.hpp"
 
 #include <map>
 
 // Key bindings.
-auto const key_up = SDLK_w;
-auto const key_down = SDLK_s;
-auto const key_left = SDLK_a;
-auto const key_right = SDLK_d;
-auto const key_fire = SDLK_SPACE;
-auto const key_rotate_left = SDLK_LEFT;
-auto const key_rotate_right = SDLK_RIGHT;
+auto const keyUp = SDLK_w;
+auto const keyDown = SDLK_s;
+auto const keyLeft = SDLK_a;
+auto const keyRight = SDLK_d;
+auto const keyFire = SDLK_SPACE;
+auto const keyRotateLeft = SDLK_LEFT;
+auto const keyRotateRight = SDLK_RIGHT;
 
 // Map key code to player action.
 PlayerAction keyCodeToPlayerAction(SDL_Keycode keyCode)
@@ -49,15 +50,12 @@ PlayerAction keyCodeToPlayerAction(SDL_Keycode keyCode)
 class GameController
 {
 public:
-  GameController(Client& c): Client_(c)
-  {
-
-  }
+  GameController(Client<GameMessage, PlayerAction> & client): client_(client) {}
 
   // Start the controller.
   void start()
   {
-    std::queue<OwnedMessage<GameMessage>>& incomingMsgs = Client_.getIncomingMsgs();
+    std::queue<OwnedMessage<GameMessage>>& incomingMsgs = client_.getIncomingMsgs();
     while (!quit_)
       {
         // Break out of loop if connection to server is lost.
@@ -68,22 +66,23 @@ public:
         
         while (!incomingMsgs.empty())
           {
-            game g = incoming_games.front();
-            incoming_games.pop();
-            game_drawer_.draw_game(g);
+            Game game;
+            incomingMsgs.front().getData(game);
+            incomingMsgs.pop();
+            gameDrawer_.drawGame(game);
           }
         
         SDL_Delay(1000 / FRAMES_PER_SECOND);
-        handle_key_events();
+        handleKeyEvents();
       }
-    if (Client_.is_connected())
-      Client_.disconnect_from_server();
+    if (client_.isConnected())
+      client_.disconnect();
     // Terminate SDL.
-    game_drawer_.close();
+    gameDrawer_.close();
   }
 
   // Handle key input from player.
-  void handle_key_events()
+  void handleKeyEvents()
   {
     SDL_Event e;
     while (SDL_PollEvent(&e) != 0)
@@ -97,16 +96,16 @@ public:
         else if (e.type == SDL_KEYDOWN)
           {
             // std::cout << "Pressed " << SDL_GetKeyName(e.key.keysym.sym) << " down \n";
-            auto found = key_map_.find(e.key.keysym.sym);
-            if (found != key_map_.end())
+            auto found = keyMap_.find(e.key.keysym.sym);
+            if (found != keyMap_.end())
               {
                 found->second = true;
               }
           }
         else if (e.type == SDL_KEYUP)
           {
-            auto found = key_map_.find(e.key.keysym.sym);
-            if (found != key_map_.end())
+            auto found = keyMap_.find(e.key.keysym.sym);
+            if (found != keyMap_.end())
               {
                 found->second = false;
               }
@@ -115,11 +114,13 @@ public:
       }
 
     // Map down-registered keys to player actions and send them to the server.
-    for (auto [key_code, is_down] : key_map_)
+    for (auto [keyCode, isDown] : keyMap_)
       {
-        if (is_down)
+        if (isDown)
           {
-            Client_.write_to_server(key_code_to_player_action(key_code));
+            Message<PlayerAction> msg;
+            msg.setData(keyCodeToPlayerAction(keyCode));
+            client_.send(msg);
           }
       }
   }
@@ -127,12 +128,12 @@ public:
 private:
 
   // Map of which keycodes are pressed down or not.
-  std::map<SDL_Keycode, bool> key_map_ = {{key_up, false}, {key_down, false}, {key_left, false}, {key_right, false},
-                                          {key_fire, false}, {key_rotate_left, false}, {key_rotate_right, false}};
+  std::map<SDL_Keycode, bool> keyMap_ = {{keyUp, false}, {keyDown, false}, {keyLeft, false}, {keyRight, false},
+                                        {keyFire, false}, {keyRotateLeft, false}, {keyRotateRight, false}};
   bool quit_ = false;
-  Client& Client_;
+  Client<GameMessage, PlayerAction> & client_;
 
-  game_drawer game_drawer_;
+  GameDrawer gameDrawer_;
   };
   
 #endif

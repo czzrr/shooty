@@ -16,24 +16,22 @@ public:
   template<class Archive>
   void serialize(Archive& ar, const unsigned int version)
   {
-    ar & pos.getX();
-    ar & pos.getY();
+    ar & pos_.getX();
+    ar & pos_.getY();
   }
 
   Bullet() = delete;
   
-  Bullet(int x, int y, int dx, int dy)
-  {
+  Bullet(int x, int y, int dx, int dy) {
     pos_ = Point(x, y);
     vel_ = Velocity(x, y);
   }
 
-  Point getPos();
-  {
+  Point getPos() const {
     return pos_;
   }
 
-  Velocity getVel() {
+  Velocity getVel() const {
     return vel_;
   }
   
@@ -45,7 +43,7 @@ public:
 
   bool operator==(const Bullet& other)
   {
-    return pos_.x == other.pos_.x && pos_.y == other.pos_.y;
+    return pos_.getX() == other.getPos().getX() && pos_.getY() == other.getPos().getY();
   }
 
 };
