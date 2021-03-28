@@ -9,6 +9,8 @@
 #include "OwnedMessage.hpp"
 #include "ConnectionOwner.hpp"
 
+// Class representing a connection between two peers.
+// The type of respectively incoming and outgoing messages are allowed to be different.
 template <typename InMsgType, typename OutMsgType>
 class Connection : public std::enable_shared_from_this<Connection<InMsgType, OutMsgType>> {
   asio::io_context& ioContext_;
@@ -21,6 +23,7 @@ class Connection : public std::enable_shared_from_this<Connection<InMsgType, Out
   Message<InMsgType> tempInMsg_;
 
 public:
+  // A connection needs a context to work in, an incoming message queue and an owner.
   Connection(asio::io_context& ioContext,
              std::queue<OwnedMessage<InMsgType>>& incomingMsgs, ConnectionOwner owner)
     : ioContext_(ioContext),
@@ -29,7 +32,7 @@ public:
       owner_(owner)
     {}
 
-  // Should check if owner of connection is a client.
+  // Connects a client to the server.
   void connectToServer(const asio::ip::tcp::resolver::results_type& endpoints)
   {
     if (owner_ == ConnectionOwner::Client) {
@@ -49,6 +52,7 @@ public:
     }
   }
 
+  // Connects the server to a client. The connection is given an ID.
   void connectToClient(uint32_t id) {
     if (owner_ == ConnectionOwner::Server) {
       id_ = id;
@@ -56,10 +60,12 @@ public:
     }
   }
 
+  // Start reading messages.
   void listenForMessages() { readHeader(); }
 
   asio::ip::tcp::socket& socket() { return socket_; }
 
+  // Write a message to the other peer.
   void write(Message<OutMsgType> msg) {
     auto self(this->shared_from_this());
   asio::post(ioContext_, [this, self, msg]() {
@@ -74,7 +80,7 @@ public:
 
   bool isConnected() { return socket_.is_open(); }
 
-  // Close the connection
+  // Close the connection.
   void disconnect() {
     std::cout << "Disconnecting connection with ID " << id_ << "\n";
     auto self(this->shared_from_this());
@@ -82,7 +88,11 @@ public:
   }
 
 private:
+  // Reading a message always starts with reading a fixed-size header.
+  // A temporary message object is used for convenience.
   void readHeader() {
+    // shared_from_this() is used for preventing bad things if the connection pointer dies
+    // after the callback handler is called but before it is finished.
     auto self(this->shared_from_this());
     asio::async_read(socket_,
                      asio::buffer(&tempInMsg_.header, tempInMsg_.headerSize()),
@@ -96,11 +106,12 @@ private:
                                    });
   }
 
-  // When the client knows how many bytes to receive, it can read the body of the message sent from the server.
+  // After having read the header we know how many bytes to receive, so we can now read the body.
   void readBody() {
+    auto self(this->shared_from_this());
     asio::async_read(
                      socket_, asio::buffer(tempInMsg_.body.data(), tempInMsg_.header.size),
-                     [this](const asio::error_code& ec, std::size_t bytes_transferred) {
+                     [this, self](const asio::error_code& ec, std::size_t bytes_transferred) {
                        if (!ec) {
                          addToIncomingMsgs(tempInMsg_);
                          // Start another asynchronous read.
@@ -112,6 +123,7 @@ private:
                      });
   }
 
+  // Add a read message to the incoming message queue.
   void addToIncomingMsgs(Message<InMsgType> msg) {
     if (owner_ == ConnectionOwner::Server) {
       incomingMsgs_.push({id_, msg});
@@ -120,6 +132,7 @@ private:
     }
   }
 
+  // Send a message, starting with the header.
   void writeHeader() {
     auto self(this->shared_from_this());
     asio::async_write(
@@ -129,12 +142,13 @@ private:
                         if (!ec) {
                           writeBody();
                         } else {
-                          std::cout << "do_write_to_client: " << ec.message() << "\n";
+                          std::cout << "writeHeader(): " << ec.message() << "\n";
                           disconnect();
                         }
                       });
   }
 
+  // Send the message body.
   void writeBody() {
     auto self(this->shared_from_this());
     asio::async_write(
@@ -147,7 +161,7 @@ private:
                             writeHeader();
                           }
                         } else {
-                          std::cout << "do_write_to_client: " << ec.message() << "\n";
+                          std::cout << "writeBody(): " << ec.message() << "\n";
                           disconnect();
                         }
                       });

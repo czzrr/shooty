@@ -1,5 +1,5 @@
-#ifndef CONSTANTS_H
-#define CONSTANTS_H
+#ifndef UTILS_H
+#define UTILS_H
 
 #include "SDL.h"
 
@@ -14,9 +14,7 @@ const int FRAMES_PER_SECOND = 60;
 const double PI = 3.141592653589793238463;
 const double DEG_TO_RAD = PI / 180.0;
 
-
-bool collidesRect(SDL_Rect r1, SDL_Rect r2)
-{
+bool collidesRect(SDL_Rect r1, SDL_Rect r2) {
   int left_r1 = r1.x;
   int right_r1 = r1.x + r1.w;
   int top_r1 = r1.y;
@@ -40,6 +38,17 @@ bool collidesRect(SDL_Rect r1, SDL_Rect r2)
     return false;
 
   return true;
+}
+
+bool isOutsideScreen(Bullet bullet) {
+  int x = bullet.getPos().x;
+  int y = bullet.getPos().y;
+  return x < 0 || x > SCREEN_WIDTH || y < 0 || y > SCREEN_HEIGHT;
+}
+
+bool collides(Bullet b, Player p) {
+  return collidesRect({b.getPos().x, b.getPos().y, BULLET_SIDE, BULLET_SIDE},
+                      {p.getPos().x, p.getPos().y, PLAYER_SIDE, PLAYER_SIDE});
 }
 
 #endif

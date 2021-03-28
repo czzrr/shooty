@@ -7,17 +7,16 @@
 #include "Point.hpp"
 #include "Velocity.hpp"
 #include "Bullet.hpp"
-#include "Constants.hpp"
-
-enum class PlayerAction : uint8_t { Up, Down, Left, Right, RotateLeft, RotateRight, FireBullet };
+#include "Utils.hpp"
+#include "PlayerAction.hpp"
 
 class Player {
   uint32_t id_;
   Point pos_;
   std::vector<Bullet> bullets_;
-  double angle_ = 0;
+  double angle_ = 0.0;
 
-  Velocity vel_ = Velocity(5, 5);
+  Velocity vel_ = {5, 5};
   static constexpr double dAngle_ = 2.0;
   
 public:
@@ -25,8 +24,7 @@ public:
   // For (de)serialization.
   friend class boost::serialization::access;
   template<class Archive>
-  void serialize(Archive& ar, const unsigned int version)
-  {
+  void serialize(Archive& ar, const unsigned int version) {
     ar & pos_;
     ar & bullets_;
   }
@@ -34,7 +32,7 @@ public:
   Player() {}
   
   Player(int x, int y, int id) {
-    pos_ = Point(x, y);
+    pos_ = {x, y};
     id_ = id;
   }
 
@@ -46,8 +44,7 @@ public:
     return pos_;
   }
 
-  void performAction(PlayerAction playerAction)
-  {
+  void performAction(PlayerAction playerAction) {
     switch (playerAction)
       {
       case PlayerAction::Up:
@@ -80,80 +77,51 @@ public:
       }
   }
   
-  void moveUp()
-  {
-    int newY = pos_.getY() - vel_.getDy();
+  void moveUp() {
+    int newY = pos_.y - vel_.dy;
     if (newY >= 0)
-      pos_.setY(newY);
+      pos_.y = newY;
   }
 
-  void moveDown()
-  {
-    int newY = pos_.getY() + vel_.getDy();
+  void moveDown() {
+    int newY = pos_.y + vel_.dy;
     if (newY + PLAYER_SIDE < SCREEN_HEIGHT)
-      pos_.setY(newY);
-    
+      pos_.y = newY;
   }
 
-  void moveLeft()
-  {
-    int newX = pos_.getX() - vel_.getDx();
+  void moveLeft() {
+    int newX = pos_.x - vel_.dx;
     if (newX >= 0)
-      pos_.setX(newX);
+      pos_.x = newX;
   }
 
-  void moveRight()
-  {
-    int newX = pos_.getX() + vel_.getDx();
+  void moveRight() {
+    int newX = pos_.x + vel_.dx;
     if (newX + PLAYER_SIDE < SCREEN_WIDTH)
-      pos_.setX(newX);
+      pos_.x = newX;
   }
 
-  void fire()
-  {
+  void fire() {
     int dx = static_cast<int>(std::round(4 * cos(angle_ * DEG_TO_RAD)));
     int dy = static_cast<int>(std::round(4 * sin(angle_ * DEG_TO_RAD)));
-    bullets_.push_back(Bullet(pos_.getX(), pos_.getY(), dx, dy));
+    bullets_.push_back(Bullet(pos_.x, pos_.y, dx, dy));
 
   }
 
-  void rotateLeft()
-  {
+  void rotateLeft() {
     angle_ -= dAngle_;
   }
 
-  void rotateRight()
-  {
+  void rotateRight() {
     angle_ += dAngle_;
   }
   
-  std::vector<Bullet>& getBullets()
-  {
+  std::vector<Bullet>& getBullets() {
     return bullets_;
   }
 };
 
 
 
-std::string playerActionToStr(PlayerAction action)
-{
-  switch (action) {
-  case PlayerAction::Up:
-    return "up";
-  case PlayerAction::Left:
-    return "left";
-  case PlayerAction::Down:
-    return "down";
-  case PlayerAction::Right:
-    return "right";
-  case PlayerAction::RotateLeft:
-    return "rotate_left";
-  case PlayerAction::RotateRight:
-    return "rotate_right";
-  case PlayerAction::FireBullet:
-    return "fire_bullet";
-  }
-  return "";
-}
 
 #endif

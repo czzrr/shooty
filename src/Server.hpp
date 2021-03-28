@@ -12,9 +12,10 @@
 #include "Player.hpp"
 #include "Game.hpp"
 
-// A single-threaded server
+// Class of a single-threaded server that can be connected to multiple clients.
 template <typename InMsgType, typename OutMsgType>
 class Server {
+  // For giving IDs to connections.
   int id_ = 0;
   
   asio::io_context& ioContext_;
@@ -26,9 +27,9 @@ class Server {
   std::queue<OwnedMessage<InMsgType>> incomingMsgs_;
   
 public:
+  // Server needs a work context and which port to be reachable from.
   Server(asio::io_context& ioContext, unsigned int port)
-    : ioContext_(ioContext), acceptor_(ioContext, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), port))
-  {
+    : ioContext_(ioContext), acceptor_(ioContext, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), port)) {
     std::cout << "Server listening on port " << port << "\n";
     listenForConnections();
   }
@@ -37,6 +38,7 @@ public:
     return connections_.size();
   }
 
+  // Get IDs of the connections. Used for syncing number of players in the game.
   std::vector<uint32_t> getIDs() {
     std::vector<uint32_t> ids;
     for (auto& connection : connections_)
@@ -49,22 +51,19 @@ public:
     return incomingMsgs_;
   }
 
-  void writeToAll(Message<OutMsgType> msg)
-  {
+  // Write a message to all connected clients.
+  void writeToAll(Message<OutMsgType> msg) {
     bool invalidClients = false;
-    for (auto& connection : connections_)
-      {
-        if (connection->isConnected())
-          {
-            connection->write(msg);
-          }
-        else 
-          {
-            std::cout << "Connection with ID " << connection->getID() << "is invalid\n";
-            invalidClients = true;
-            connection.reset(); // Release pointer's ownership of object pointed to (makes the pointer nullptr).
-          }
+    for (auto& connection : connections_) {
+      if (connection->isConnected()) {
+        connection->write(msg);
       }
+      else  {
+        std::cout << "Connection with ID " << connection->getID() << "is invalid\n";
+        invalidClients = true;
+        connection.reset(); // Release pointer's ownership of object pointed to (makes the pointer nullptr).
+      }
+    }
 
     // Remove disconnected clients, if any
     if (invalidClients) {
@@ -76,54 +75,45 @@ public:
     // and the end, eliminating all null connections.
   }
 
-  // Remove player from game and connection by id.
-  // Happens when some async task failed or player died.
-  void disconnect(uint32_t id)
-  {
-    for (auto& connection : connections_)
-      {
-        if (connection->getID() == id)
-          {
-            connection->disconnect();
-            connections_.erase(
-                               std::remove_if(connections_.begin(), connections_.end(),
-                                              [id](std::shared_ptr<Connection<InMsgType, OutMsgType>> c)
-                                              { return c->getID() == id; }),
-                               connections_.end());
-            break;
-          }
+  // Disconnect from client with the given id.
+  void disconnect(uint32_t id) {
+    for (auto& connection : connections_) {
+      if (connection->getID() == id) {
+        connection->disconnect();
+        connections_.erase(
+                           std::remove_if(connections_.begin(), connections_.end(),
+                                          [id](std::shared_ptr<Connection<InMsgType, OutMsgType>> c)
+                                          { return c->getID() == id; }),
+                           connections_.end());
+        break;
       }
-
-    
-
+    }
   }
   
 private:
- 
-  void listenForConnections()
-  {
-    // The next connection that is accepted, which takes the io context as argument so it can create a socket
-    // that is listened to.
+
+  // Listen for clients that are trying to connect.
+  void listenForConnections() {
+    // The next connection to be accepted, which takes the io context as argument
+    // so it can create a socket that is listened to.
     std::shared_ptr<Connection<InMsgType, OutMsgType>> connection =
       std::make_shared<Connection<InMsgType, OutMsgType>>(ioContext_, incomingMsgs_, ConnectionOwner::Server);
 
     // The acceptor accepts connections that connect to the given port.
     // When a connection is established via the socket, the handler is called.
-    acceptor_.async_accept(connection->socket(), [this, connection](const asio::error_code& ec)
-                           {
-                             if (!ec)
-                               {
-                                 std::cout << "[Client connected] " << connection->socket().remote_endpoint() << ". ID: " << id_ << "\n";
-                                 connection->connectToClient(id_++); // Give connection an ID and start reading messages
-                                 connections_.push_back(std::move(connection));
-                               }
-                             else
-                               {
-                                 std::cout << ec.message() << "\n";
-                               }
-                             // Keep listening for connections
-                             listenForConnections();
-                           });
+    acceptor_.async_accept(connection->socket(), [this, connection](const asio::error_code& ec) {
+        if (!ec) {
+          std::cout << "[Client connected] " << connection->socket().remote_endpoint() << ". ID: " << id_ << "\n";
+          connection->connectToClient(id_++); // Give connection an ID and start reading messages
+          connections_.push_back(std::move(connection));
+        }
+        else
+          {
+            std::cout << ec.message() << "\n";
+          }
+        // Keep listening for connections
+        listenForConnections();
+      });
   }
 
   

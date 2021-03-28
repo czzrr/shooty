@@ -8,14 +8,17 @@
 #include <iostream>
 #include <queue>
 
+// Class representing a client that can connect to the server.
 template <typename InMsgType, typename OutMsgType>
 class Client {
   asio::io_context& ioContext_;
-  std::shared_ptr<Connection<InMsgType, OutMsgType>> connection_;
+  // A client only has one connection, hence the pointer is unique.
+  std::unique_ptr<Connection<InMsgType, OutMsgType>> connection_;
   
   std::queue<OwnedMessage<InMsgType>> incomingMsgs_;
 
  public:
+  // A client needs a context for the connection to work in, along with which endpoints it should connect to.
   Client(asio::io_context& ioContext,
          const asio::ip::tcp::resolver::results_type& endpoints)
     : ioContext_(ioContext) {
