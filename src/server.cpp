@@ -4,6 +4,7 @@
 
 #include "Server.hpp"
 #include "Game.hpp"
+#include "GameMessage.hpp"
 
 int main()
 {
@@ -11,19 +12,19 @@ int main()
   
   asio::io_context ioContext;
   unsigned int port = 60000;
-  Server<Game> server(ioContext, port);
+  Server<PlayerAction, GameMessage> server(ioContext, port);
   std::thread t([&]() { ioContext.run(); });
   
-  server.writeToAll(game);
-  std::queue<OwnedMessage<Game>>& incomingMsgs = server.getIncomingMsgs();
+  //server.writeToAll(game);
+  std::queue<OwnedMessage<PlayerAction>>& incomingMsgs = server.getIncomingMsgs();
   while(true)
     {
       // If any incoming messages, update game state according to them
       while (!incomingMsgs.empty())
         {
-          OwnedMessage<Game> ownedMessage = incomingMsgs.front();
-          uint32 id = ownedMessage.getID();
-          Action action = messageToAction(ownedMessage.getMessage());
+          OwnedMessage<PlayerAction> ownedMessage = incomingMsgs.front();
+          uint32_t id = ownedMessage.id;
+          PlayerAction action = ownedMessage.msg.header.messageId;
           if (!game.performAction(id, action))
             {
               std::cout << "player " << id << " not found\n";
@@ -33,8 +34,11 @@ int main()
         }
       
       game.advance(); // Advance to next game state
-      server.writeToAll(game);
-      std::this_thread::sleep_for((1000 / FRAMES_PER_SECOND)ms);
+      Message<GameMessage> msg;
+      msg.setMessageId(GameMessage::GameState);
+      msg.setData(game);
+      server.writeToAll(msg);
+      std::this_thread::sleep_for(std::chrono::milliseconds(1000 / FRAMES_PER_SECOND));
     }
 
   

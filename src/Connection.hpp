@@ -18,7 +18,7 @@ class Connection : public std::enable_shared_from_this<Connection<InMsgType, Out
   uint32_t id_;
   std::queue<OwnedMessage<InMsgType>>& incomingMsgs_;
   std::queue<Message<OutMsgType>> outgoingMsgs_;
-  OwnedMessage<InMsgType> tempInMsg_;
+  Message<InMsgType> tempInMsg_;
 
 public:
   Connection(asio::io_context& ioContext,
@@ -66,7 +66,7 @@ public:
                               bool writeInProgress = !outgoingMsgs_.empty();
                               outgoingMsgs_.push(msg);
                               if (!writeInProgress)
-                                write();
+                                writeHeader();
                             });
   }
 
@@ -84,7 +84,7 @@ private:
   void readHeader() {
     auto self(this->shared_from_this());
     asio::async_read(socket_,
-                     asio::buffer( & tempInMsg_.header, tempInMsg_.headerSize(),
+                     asio::buffer(&tempInMsg_.header, tempInMsg_.headerSize()),
                                    [this, self](const asio::error_code & ec, std::size_t /* bytes_transferred */ ) {
                                      if (!ec) {
                                        readBody();
@@ -92,16 +92,16 @@ private:
                                        std::cout << "readHeader(): " << ec.message() << "\n";
                                        disconnect();
                                      }
-                                   }));
+                                   });
   }
 
   // When the client knows how many bytes to receive, it can read the body of the message sent from the server.
   void readBody() {
     asio::async_read(
-                     socket_, asio::buffer(tempInMsg_.body.data(), tempInMsg_.bodySize()),
+                     socket_, asio::buffer(tempInMsg_.body.data(), tempInMsg_.body.size()),
                      [this](const asio::error_code& ec, std::size_t bytes_transferred) {
                        if (!ec) {
-                         addToIncomingMsgs();
+                         addToIncomingMsgs(tempInMsg_);
                          // Start another asynchronous read.
                          readHeader();
                        } else {
@@ -113,9 +113,9 @@ private:
 
   void addToIncomingMsgs(Message<InMsgType> msg) {
     if (owner_ == ConnectionOwner::Server) {
-      incomingMsgs_.push_back(OwnedMessage<InMsgType>(this->shared_from_this(), msg));
+      incomingMsgs_.push({id_, msg});
     } else {
-      incomingMsgs_.push_back(OwnedMessage<InMsgType>(nullptr, msg));
+      incomingMsgs_.push({0, msg});
     }
   }
 

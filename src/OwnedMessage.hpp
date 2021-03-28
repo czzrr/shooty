@@ -2,9 +2,9 @@
 #define OWNED_MESSAGE_H
 
 template <typename T>
-class OwnedMessage : Message<T> {
-public:
-  int id_;
+struct OwnedMessage {
+  uint32_t id;
+  Message<T> msg;
 };
 
 #endif

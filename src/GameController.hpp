@@ -44,6 +44,8 @@ PlayerAction keyCodeToPlayerAction(SDL_Keycode keyCode)
     case keyRotateRight:
       return PlayerAction::RotateRight;
     }
+
+  return PlayerAction::FireBullet;
 }
 
 // This class handles player input, reads incoming game states from the server and tells the game drawer to draw.
@@ -67,7 +69,7 @@ public:
         while (!incomingMsgs.empty())
           {
             Game game;
-            incomingMsgs.front().getData(game);
+            incomingMsgs.front().msg.getData(game);
             incomingMsgs.pop();
             gameDrawer_.drawGame(game);
           }

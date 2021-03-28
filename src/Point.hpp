@@ -6,6 +6,15 @@ class Point {
   int y_;
 
 public:
+
+  friend class boost::serialization::access;
+  template<class Archive>
+  void serialize(Archive& ar, const unsigned int version)
+  {
+    ar & x_;
+    ar & y_;
+  }
+  
   Point() {}
   
   Point(int x, int y) {

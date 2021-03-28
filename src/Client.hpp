@@ -18,7 +18,7 @@ class Client {
  public:
   Client(asio::io_context& ioContext,
          const asio::ip::tcp::resolver::results_type& endpoints)
-      : ioContext_(ioContext), connection_(ioContext, incomingMsgs_) {
+    : ioContext_(ioContext), connection_(ioContext, incomingMsgs_, ConnectionOwner::Client) {
     connection_.connectToServer(endpoints);
   }
 
@@ -40,7 +40,7 @@ class Client {
   
   void disconnect() {
     std::cout << "Client::disconnect(): Disconnecting from server\n";
-    connection_.close();
+    connection_.disconnect();
   }
 };
 

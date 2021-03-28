@@ -8,13 +8,24 @@
 #include <string>
 
 template <typename T>
-class Message {
-  T messageId_;
-  std::string body_;
+struct Header {
+    T messageId;
+    uint32_t size;
+};
 
+template <typename T>
+class Message {
 public:
+  
+  Header<T> header;
+  std::string body;
+
+  uint32_t headerSize() {
+    return sizeof(Header<T>);
+  }
+  
   void setMessageId(T messageId) {
-    messageId_ = messageId;
+    header.messageId = messageId;
   }
 
   template<typename BodyData>
@@ -24,17 +35,21 @@ public:
       boost::archive::text_oarchive oa(ss);
       oa & data;
     }
-    body_ = ss.str();
+    body = ss.str();
   }
 
   template <typename BodyData>
   void getData(BodyData& data) {
     std::stringstream ss;
-    ss << body_;
+    ss << body;
     {
       boost::archive::text_iarchive ia(ss);
       ia & data;
     }
+  }
+
+  size_t bodySize() {
+    return body.size();
   }
   
 };

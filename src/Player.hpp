@@ -27,12 +27,11 @@ public:
   template<class Archive>
   void serialize(Archive& ar, const unsigned int version)
   {
-    ar & pos_.getX();
-    ar & pos_.getY();
+    ar & pos_;
     ar & bullets_;
   }
   
-  Player() = delete;
+  Player() {}
   
   Player(int x, int y, int id) {
     pos_ = Point(x, y);
@@ -154,6 +153,7 @@ std::string playerActionToStr(PlayerAction action)
   case PlayerAction::FireBullet:
     return "fire_bullet";
   }
+  return "";
 }
 
 #endif

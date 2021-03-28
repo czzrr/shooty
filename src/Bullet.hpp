@@ -16,11 +16,10 @@ public:
   template<class Archive>
   void serialize(Archive& ar, const unsigned int version)
   {
-    ar & pos_.getX();
-    ar & pos_.getY();
+    ar & pos_;
   }
 
-  Bullet() = delete;
+  Bullet() {}
   
   Bullet(int x, int y, int dx, int dy) {
     pos_ = Point(x, y);

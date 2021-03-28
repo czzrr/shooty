@@ -17,6 +17,7 @@ int main() {
   // Get endpoints based on host name and port.
   asio::ip::tcp::resolver::results_type endpoints = resolver.resolve("127.0.0.1", "60000");
 
+
   Client<GameMessage, PlayerAction> client(ioContext, endpoints);
 
   // Thread for Asio to work in.
