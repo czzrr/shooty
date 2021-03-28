@@ -62,7 +62,7 @@ public:
 
   void write(Message<OutMsgType> msg) {
     auto self(this->shared_from_this());
-    asio::post(ioContext_, [this, msg, self]() {
+  asio::post(ioContext_, [this, self, msg]() {
                               bool writeInProgress = !outgoingMsgs_.empty();
                               outgoingMsgs_.push(msg);
                               if (!writeInProgress)
@@ -76,6 +76,7 @@ public:
 
   // Close the connection
   void disconnect() {
+    std::cout << "Disconnecting connection with ID " << id_ << "\n";
     auto self(this->shared_from_this());
     asio::post(ioContext_, [this, self]() { socket_.close(); });
   }
@@ -85,7 +86,7 @@ private:
     auto self(this->shared_from_this());
     asio::async_read(socket_,
                      asio::buffer(&tempInMsg_.header, tempInMsg_.headerSize()),
-                                   [this, self](const asio::error_code & ec, std::size_t /* bytes_transferred */ ) {
+                     [this, self](const asio::error_code & ec, std::size_t /* bytes_transferred */ ) {
                                      if (!ec) {
                                        readBody();
                                      } else {
@@ -98,7 +99,7 @@ private:
   // When the client knows how many bytes to receive, it can read the body of the message sent from the server.
   void readBody() {
     asio::async_read(
-                     socket_, asio::buffer(tempInMsg_.body.data(), tempInMsg_.body.size()),
+                     socket_, asio::buffer(tempInMsg_.body.data(), tempInMsg_.header.size),
                      [this](const asio::error_code& ec, std::size_t bytes_transferred) {
                        if (!ec) {
                          addToIncomingMsgs(tempInMsg_);
@@ -138,7 +139,7 @@ private:
     auto self(this->shared_from_this());
     asio::async_write(
                       socket_, asio::buffer(outgoingMsgs_.front().body.data(),
-                                            outgoingMsgs_.front().bodySize()),
+                                            outgoingMsgs_.front().header.size),
                       [this, self](const asio::error_code& ec, std::size_t bytes_transferred) {
                         if (!ec) {
                           outgoingMsgs_.pop();

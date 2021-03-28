@@ -33,6 +33,17 @@ public:
     listenForConnections();
   }
 
+  int numConnections() {
+    return connections_.size();
+  }
+
+  std::vector<uint32_t> getIDs() {
+    std::vector<uint32_t> ids;
+    for (auto& connection : connections_)
+      ids.push_back(connection->getID());
+    return ids;
+  }
+  
   std::queue<OwnedMessage<InMsgType>>& getIncomingMsgs()
   {
     return incomingMsgs_;
@@ -49,14 +60,17 @@ public:
           }
         else 
           {
+            std::cout << "Connection with ID " << connection->getID() << "is invalid\n";
             invalidClients = true;
             connection.reset(); // Release pointer's ownership of object pointed to (makes the pointer nullptr).
           }
       }
 
     // Remove disconnected clients, if any
-    if (invalidClients)
+    if (invalidClients) {
       connections_.erase(std::remove(connections_.begin(), connections_.end(),  nullptr), connections_.end());
+      std::cout << "new num connections: " << connections_.size() << "\n";
+    }
     // The call to std::remove shifts all non-null connections to the beginning and returns an iterator
     // that is one past the end of these. std::erase then deletes the elements between this iterator
     // and the end, eliminating all null connections.
@@ -99,7 +113,7 @@ private:
                            {
                              if (!ec)
                                {
-                                 std::cout << "[Client connected] " << connection->socket().remote_endpoint() << "\n";
+                                 std::cout << "[Client connected] " << connection->socket().remote_endpoint() << ". ID: " << id_ << "\n";
                                  connection->connectToClient(id_++); // Give connection an ID and start reading messages
                                  connections_.push_back(std::move(connection));
                                }

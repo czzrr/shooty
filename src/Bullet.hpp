@@ -6,6 +6,8 @@
 #include "Point.hpp"
 #include "Velocity.hpp"
 
+
+#include <iostream>
   
 class Bullet {
   Point pos_;
@@ -23,7 +25,7 @@ public:
   
   Bullet(int x, int y, int dx, int dy) {
     pos_ = Point(x, y);
-    vel_ = Velocity(x, y);
+    vel_ = Velocity(dx, dy);
   }
 
   Point getPos() const {

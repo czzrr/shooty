@@ -10,13 +10,17 @@
 template <typename T>
 struct Header {
     T messageId;
-    uint32_t size;
+  uint32_t size = 0;
 };
 
 template <typename T>
 class Message {
 public:
-  
+
+  Message() {
+    body.resize(9999);
+  }
+               
   Header<T> header;
   std::string body;
 
@@ -36,6 +40,7 @@ public:
       oa & data;
     }
     body = ss.str();
+    header.size = body.size();
   }
 
   template <typename BodyData>

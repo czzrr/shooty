@@ -26,8 +26,6 @@ int main() {
   GameController gameController(client);
   gameController.start();
 
-  client.disconnect();
-
   // Wait for the thread that asio works in to end.
   if (t.joinable())
     t.join();

@@ -17,8 +17,12 @@ int main()
   
   //server.writeToAll(game);
   std::queue<OwnedMessage<PlayerAction>>& incomingMsgs = server.getIncomingMsgs();
+  int numPlayers = 0;
   while(true)
     {
+      if (game.getNumPlayers() != server.numConnections()) {
+        game.syncPlayers(server.getIDs());
+      }
       // If any incoming messages, update game state according to them
       while (!incomingMsgs.empty())
         {
@@ -32,7 +36,9 @@ int main()
             }
           incomingMsgs.pop();
         }
-      
+
+
+  
       game.advance(); // Advance to next game state
       Message<GameMessage> msg;
       msg.setMessageId(GameMessage::GameState);

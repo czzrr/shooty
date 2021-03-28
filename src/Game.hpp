@@ -24,8 +24,9 @@ bool collides(Bullet b, Player p)
 }
 
 
-class Game
-{
+class Game {
+  std::map<uint32_t, Player> players_;
+  
 public:
 
   // For (de)serialization.
@@ -37,16 +38,45 @@ public:
   }
   
   Game() { }
+
+  int getNumPlayers() {
+    return players_.size();
+  }
+
+  void syncPlayers(std::vector<uint32_t> ids) {
+    std::cout << "players: ";
+    for (auto& [id, _] : players_)
+      std::cout << id << " ";
+    std::cout << "\n";
+
+    std::cout << "connections: ";
+    for (auto id : ids)
+      std::cout << id << " ";
+    std::cout << "\n";
+    
+    if (players_.size() < ids.size()) {
+      addPlayer(ids[ids.size() - 1]);
+    } else if (players_.size() > ids.size()) {
+      for (auto& [id, _] : players_) {
+        if (std::find(ids.begin(), ids.end(), id) == ids.end()) {
+          removePlayer(id);
+          break;
+        }
+      }
+    }
+  }
+
   
   void addPlayer(int id)
   {
+    std::cout << "Adding player with ID " << id << "\n";
     // Place player on random position (and grant him 3 seconds immunity?).
     Player player(100, 100, id);
     players_.insert({id, player});
   }
 
-  void removePlayer(int id)
-  {
+  void removePlayer(int id) {
+    std::cout << "Removing player with ID " << id << "\n";
     auto found = players_.find(id);
     if (found != players_.end())
       {
@@ -78,8 +108,9 @@ public:
       {
         std::vector<Bullet>& bullets = player.getBullets();
         std::vector<Bullet> bulletsToDelete;
-        for (Bullet& b : player.getBullets())
+        for (Bullet& b : bullets)
           {
+            bool bulletDeleted = false;
             for (auto [_, p] : players_)
               {
                 // Check if current player's bullets collides with another player.
@@ -87,14 +118,17 @@ public:
                   {
                     playersToDelete.push_back(p.getID());
                     bulletsToDelete.push_back(b);
+                    bulletDeleted = true;
                   }
                 // Check if bullet is outside screen.
                 else if (isOutsideScreen(b))
                   {
                     bulletsToDelete.push_back(b);
+                    bulletDeleted = true;
                   }
               }
-            b.move();
+            if (!bulletDeleted)
+              b.move();
           }
         // Remove bullets that have collided with players or are out of screen.
         for (Bullet& b : bulletsToDelete) {
@@ -102,14 +136,12 @@ public:
         }
       }
     // Remove players hit by a bullet.
-    for (int id : playersToDelete)
-      {
+    for (int id : playersToDelete) {
         removePlayer(id);
       }
   }
   
-private:
-  std::map<uint32_t, Player> players_;
+
 };
 
 

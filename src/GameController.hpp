@@ -6,7 +6,7 @@
 #include "Game.hpp"
 #include "Constants.hpp"
 #include "GameMessage.hpp"
-
+#include<iostream>
 #include <map>
 
 // Key bindings.
@@ -49,8 +49,15 @@ PlayerAction keyCodeToPlayerAction(SDL_Keycode keyCode)
 }
 
 // This class handles player input, reads incoming game states from the server and tells the game drawer to draw.
-class GameController
-{
+class GameController {
+  // Map of which keycodes are pressed down or not.
+  std::map<SDL_Keycode, bool> keyMap_ = {{keyUp, false}, {keyDown, false}, {keyLeft, false}, {keyRight, false},
+                                         {keyFire, false}, {keyRotateLeft, false}, {keyRotateRight, false}};
+  bool quit_ = false;
+  Client<GameMessage, PlayerAction> & client_;
+
+  GameDrawer gameDrawer_;
+  
 public:
   GameController(Client<GameMessage, PlayerAction> & client): client_(client) {}
 
@@ -121,21 +128,14 @@ public:
         if (isDown)
           {
             Message<PlayerAction> msg;
-            msg.setData(keyCodeToPlayerAction(keyCode));
+            msg.header.messageId = keyCodeToPlayerAction(keyCode);
+            std::cout << playerActionToStr(keyCodeToPlayerAction(keyCode)) << "\n";
             client_.send(msg);
           }
       }
   }
   
-private:
 
-  // Map of which keycodes are pressed down or not.
-  std::map<SDL_Keycode, bool> keyMap_ = {{keyUp, false}, {keyDown, false}, {keyLeft, false}, {keyRight, false},
-                                        {keyFire, false}, {keyRotateLeft, false}, {keyRotateRight, false}};
-  bool quit_ = false;
-  Client<GameMessage, PlayerAction> & client_;
-
-  GameDrawer gameDrawer_;
-  };
+};
   
 #endif
