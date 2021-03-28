@@ -36,12 +36,10 @@ int main()
             }
           incomingMsgs.pop();
         }
-
-
   
       game.advance(); // Advance to next game state
       Message<GameMessage> msg;
-      msg.setMessageId(GameMessage::GameState);
+      msg.header.messageId = GameMessage::GameState;
       msg.setData(game);
       server.writeToAll(msg);
       std::this_thread::sleep_for(std::chrono::milliseconds(1000 / FRAMES_PER_SECOND));

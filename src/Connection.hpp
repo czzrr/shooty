@@ -95,9 +95,10 @@ private:
     // after the callback handler is called but before it is finished.
     auto self(this->shared_from_this());
     asio::async_read(socket_,
-                     asio::buffer(&tempInMsg_.header, tempInMsg_.headerSize()),
+                     asio::buffer(&tempInMsg_.header, sizeof(Header<InMsgType>)),
                      [this, self](const asio::error_code & ec, std::size_t /* bytes_transferred */ ) {
                                      if (!ec) {
+                                       tempInMsg_.body.resize(tempInMsg_.header.size);
                                        readBody();
                                      } else {
                                        std::cout << "readHeader(): " << ec.message() << "\n";
@@ -137,7 +138,7 @@ private:
     auto self(this->shared_from_this());
     asio::async_write(
                       socket_, asio::buffer(&outgoingMsgs_.front().header,
-                                            outgoingMsgs_.front().headerSize()),
+                                            sizeof(Header<InMsgType>)),
                       [this, self](const asio::error_code& ec, std::size_t bytes_transferred) {
                         if (!ec) {
                           writeBody();

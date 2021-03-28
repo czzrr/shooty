@@ -3,7 +3,6 @@
 
 enum class PlayerAction : uint8_t { Up, Down, Left, Right, RotateLeft, RotateRight, FireBullet };
 
-
 std::string playerActionToStr(PlayerAction action)
 {
   switch (action) {

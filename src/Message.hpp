@@ -7,30 +7,21 @@
 #include <boost/archive/text_oarchive.hpp>
 #include <string>
 
+// Header of a message.
+// Contains a message ID and the size of the body.
 template <typename T>
 struct Header {
-    T messageId;
+  T messageId;
   uint32_t size = 0;
 };
 
+// This class represents a message that can be exchanged between peers.
+// It uses the Boost serialization library to encode and decode data.
+// Hence the objects to be sent in the message body must implement serialization functions.
 template <typename T>
-class Message {
-public:
-
-  Message() {
-    body.resize(9999);
-  }
-               
+struct Message {
   Header<T> header;
   std::string body;
-
-  uint32_t headerSize() {
-    return sizeof(Header<T>);
-  }
-  
-  void setMessageId(T messageId) {
-    header.messageId = messageId;
-  }
 
   template<typename BodyData>
   void setData(BodyData data) {
@@ -51,10 +42,6 @@ public:
       boost::archive::text_iarchive ia(ss);
       ia & data;
     }
-  }
-
-  size_t bodySize() {
-    return body.size();
   }
   
 };

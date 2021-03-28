@@ -10,6 +10,9 @@
 
 #include <boost/serialization/map.hpp>
 
+bool isOutsideScreen(Bullet bullet);
+bool collides(Bullet b, Player p);
+
 class Game {
   std::map<uint32_t, Player> players_;
   
@@ -118,7 +121,16 @@ public:
 
 };
 
+bool isOutsideScreen(Bullet bullet) {
+  int x = bullet.getPos().x;
+  int y = bullet.getPos().y;
+  return x < 0 || x > SCREEN_WIDTH || y < 0 || y > SCREEN_HEIGHT;
+}
 
+bool collides(Bullet b, Player p) {
+  return collidesRect({b.getPos().x, b.getPos().y, BULLET_SIDE, BULLET_SIDE},
+                      {p.getPos().x, p.getPos().y, PLAYER_SIDE, PLAYER_SIDE});
+}
 
 
 #endif

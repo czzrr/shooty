@@ -24,8 +24,8 @@ public:
   Bullet() {}
   
   Bullet(int x, int y, int dx, int dy) {
-    pos_ = Point(x, y);
-    vel_ = Velocity(dx, dy);
+    pos_ = {x, y};
+    vel_ = {dx, dy};
   }
 
   Point getPos() const {
@@ -36,15 +36,13 @@ public:
     return vel_;
   }
   
-  void move()
-  {
-    pos_.setX(pos_.getX() + vel_.getDx());
-    pos_.setY(pos_.getY() + vel_.getDy());
+  void move() {
+    pos_.x = pos_.x + vel_.dx;
+    pos_.y = pos_.y + vel_.dy;
   }
 
-  bool operator==(const Bullet& other)
-  {
-    return pos_.getX() == other.getPos().getX() && pos_.getY() == other.getPos().getY();
+  bool operator==(const Bullet& other) {
+    return pos_.x == other.getPos().x && pos_.y == other.getPos().y;
   }
 
 };

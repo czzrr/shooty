@@ -13,7 +13,7 @@ template <typename InMsgType, typename OutMsgType>
 class Client {
   asio::io_context& ioContext_;
   // A client only has one connection, hence the pointer is unique.
-  std::unique_ptr<Connection<InMsgType, OutMsgType>> connection_;
+  std::shared_ptr<Connection<InMsgType, OutMsgType>> connection_;
   
   std::queue<OwnedMessage<InMsgType>> incomingMsgs_;
 

@@ -2,7 +2,7 @@
 #define GAMEDRAWER_H
 
 #include "Game.hpp"
-#include "Constants.hpp"
+#include "Utils.hpp"
 
 class GameDrawer {
   SDL_Window* window_ = nullptr;
@@ -30,13 +30,13 @@ public:
     for (auto [_, player] : game_.getPlayers())
       {
         Point playerPos = player.getPos();
-        SDL_Rect playerRect = { playerPos.getX(), playerPos.getY(), PLAYER_SIDE, PLAYER_SIDE };
+        SDL_Rect playerRect = { playerPos.x, playerPos.y, PLAYER_SIDE, PLAYER_SIDE };
         SDL_RenderFillRect(renderer_, &playerRect);
 
         for (auto bullet : player.getBullets())
           {
             Point bulletPos = bullet.getPos();
-            SDL_Rect bulletRect = { bulletPos.getX(), bulletPos.getY(), BULLET_SIDE, BULLET_SIDE };
+            SDL_Rect bulletRect = { bulletPos.x, bulletPos.y, BULLET_SIDE, BULLET_SIDE };
             SDL_RenderFillRect(renderer_, &bulletRect);
           }
       }
