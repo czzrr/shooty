@@ -36,8 +36,12 @@ int main()
             }
           incomingMsgs.pop();
         }
-  
-      game.advance(); // Advance to next game state
+
+      std::vector<uint32_t> idsToRemove = game.advance();
+      if (!idsToRemove.empty()) {
+        server.disconnectFrom(idsToRemove);
+      }
+      
       Message<GameMessage> msg;
       msg.header.messageId = GameMessage::GameState;
       msg.setData(game);

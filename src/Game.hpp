@@ -82,10 +82,10 @@ public:
       }
     return false;
   }
-
+  
   // Advance to the next game state.
-  void advance() {
-    std::vector<int> playersToDelete;
+  std::vector<uint32_t> advance() {
+    std::vector<uint32_t> playersToDelete;
     for (auto& [_, player] : players_) {
       std::vector<Bullet>& bullets = player.getBullets();
       std::vector<Bullet> bulletsToDelete;
@@ -116,6 +116,8 @@ public:
     for (int id : playersToDelete) {
       removePlayer(id);
     }
+    
+    return playersToDelete;
   }
   
 

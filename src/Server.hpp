@@ -51,6 +51,16 @@ public:
     return incomingMsgs_;
   }
 
+  void disconnectFrom(std::vector<uint32_t> ids) {
+    for (auto& connection : connections_) {
+      if (std::find(ids.begin(), ids.end(), connection->getID()) != ids.end()) {
+        connection->disconnect();
+        connection.reset();
+      }
+    }
+    connections_.erase(std::remove(connections_.begin(), connections_.end(),  nullptr), connections_.end());
+  }
+  
   // Write a message to all connected clients.
   void writeToAll(Message<OutMsgType> msg) {
     bool invalidClients = false;
