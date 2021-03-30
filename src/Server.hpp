@@ -64,6 +64,7 @@ public:
   
   // Write a message to all connected clients.
   void writeToAll(Message<OutMsgType> msg) {
+    //std::cout << "begin\n";
     bool invalidClients = false;
     for (auto& connection : connections_) {
       if (connection->isConnected()) {
@@ -75,7 +76,7 @@ public:
         connection.reset(); // Release pointer's ownership of object pointed to (makes the pointer nullptr).
       }
     }
-
+    //std::cout << "end\n";
     // Remove disconnected clients, if any
     if (invalidClients) {
       connections_.erase(std::remove(connections_.begin(), connections_.end(),  nullptr), connections_.end());

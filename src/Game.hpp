@@ -7,7 +7,8 @@
 #include "Player.hpp"
 #include "Bullet.hpp"
 #include "Utils.hpp"
-
+#include <chrono>
+#include <map>
 #include <boost/serialization/map.hpp>
 
 bool isOutsideScreen(Bullet bullet);
@@ -15,7 +16,7 @@ bool collides(Bullet b, Player p);
 
 class Game {
   std::map<uint32_t, Player> players_;
-  
+  std::map<uint32_t, std::chrono::time_point<std::chrono::system_clock>> lastBulletTimes_;
 public:
 
   // For (de)serialization.
@@ -77,9 +78,51 @@ public:
   bool performAction(int id, PlayerAction playerAction) {
     auto found = players_.find(id);
     if (found != players_.end()) {
-        found->second.performAction(playerAction);
-        return true;
+      Player& p = found->second;
+      switch (playerAction) {
+      case PlayerAction::Up:
+        p.moveUp();
+        break;
+
+      case PlayerAction::Down:
+        p.moveDown();
+        break;
+        
+      case PlayerAction::Left:
+        p.moveLeft();        
+        break;
+        
+      case PlayerAction::Right:
+        p.moveRight();
+        break;
+        
+      case PlayerAction::FireBullet:
+        {
+          auto foundTime = lastBulletTimes_.find(id);
+          if (foundTime != lastBulletTimes_.end()) {
+            auto start = foundTime->second;
+            auto end = std::chrono::system_clock::now();
+            if (std::chrono::duration_cast<std::chrono::milliseconds>(end - start) >= std::chrono::milliseconds(250)) {
+              lastBulletTimes_.insert_or_assign(id, end);
+              p.fire();
+            }
+          } else {
+            lastBulletTimes_.insert({id, std::chrono::system_clock::now()});
+            p.fire();
+          }
+        }
+        break;
+        
+      case PlayerAction::RotateLeft:
+        p.rotateLeft();
+        break;
+        
+      case PlayerAction::RotateRight:
+        p.rotateRight();
+        break;
       }
+      return true;
+    }
     return false;
   }
   

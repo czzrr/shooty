@@ -43,39 +43,6 @@ public:
   Point getPos() const {
     return pos_;
   }
-
-  void performAction(PlayerAction playerAction) {
-    switch (playerAction)
-      {
-      case PlayerAction::Up:
-        moveUp();
-        break;
-
-      case PlayerAction::Down:
-        moveDown();
-        break;
-        
-      case PlayerAction::Left:
-        moveLeft();        
-        break;
-        
-      case PlayerAction::Right:
-        moveRight();
-        break;
-        
-      case PlayerAction::FireBullet:
-        fire();
-        break;
-        
-      case PlayerAction::RotateLeft:
-        rotateLeft();
-        break;
-        
-      case PlayerAction::RotateRight:
-        rotateRight();
-        break;
-      }
-  }
   
   void moveUp() {
     int newY = pos_.y - vel_.dy;
