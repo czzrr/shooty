@@ -7,6 +7,7 @@
 #include "Connection.hpp"
 #include <iostream>
 #include <queue>
+#include "TSQueue.hpp"
 
 // Class representing a client that can connect to the server.
 template <typename InMsgType, typename OutMsgType>
@@ -15,7 +16,7 @@ class Client {
   // A client only has one connection, hence the pointer is unique.
   std::shared_ptr<Connection<InMsgType, OutMsgType>> connection_;
   
-  std::queue<OwnedMessage<InMsgType>> incomingMsgs_;
+  TSQueue<OwnedMessage<InMsgType>> incomingMsgs_;
 
  public:
   // A client needs a context for the connection to work in, along with which endpoints it should connect to.
@@ -31,7 +32,7 @@ class Client {
     connection_->connectToServer(ConnectionOwner::Client);
   }
   
-  std::queue<OwnedMessage<InMsgType>>& getIncomingMsgs() { return incomingMsgs_; }
+  TSQueue<OwnedMessage<InMsgType>>& getIncomingMsgs() { return incomingMsgs_; }
   
   void send(Message<OutMsgType> msg) {
     if (connection_->isConnected()) {

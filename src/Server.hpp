@@ -11,6 +11,7 @@
 #include "Message.hpp"
 #include "Player.hpp"
 #include "Game.hpp"
+#include "TSQueue.hpp"
 
 // Class of a single-threaded server that can be connected to multiple clients.
 template <typename InMsgType, typename OutMsgType>
@@ -24,7 +25,7 @@ class Server {
   
   // The server's connections to clients.
   std::vector<std::shared_ptr<Connection<InMsgType, OutMsgType>>> connections_;
-  std::queue<OwnedMessage<InMsgType>> incomingMsgs_;
+  TSQueue<OwnedMessage<InMsgType>> incomingMsgs_;
   
 public:
   // Server needs a work context and which port to be reachable from.
@@ -46,7 +47,7 @@ public:
     return ids;
   }
   
-  std::queue<OwnedMessage<InMsgType>>& getIncomingMsgs()
+  TSQueue<OwnedMessage<InMsgType>>& getIncomingMsgs()
   {
     return incomingMsgs_;
   }

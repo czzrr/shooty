@@ -8,6 +8,7 @@
 #include "Message.hpp"
 #include "OwnedMessage.hpp"
 #include "ConnectionOwner.hpp"
+#include "TSQueue.hpp"
 
 // Class representing a connection between two peers.
 // The type of respectively incoming and outgoing messages are allowed to be different.
@@ -18,14 +19,14 @@ class Connection : public std::enable_shared_from_this<Connection<InMsgType, Out
 
   ConnectionOwner owner_;
   uint32_t id_;
-  std::queue<OwnedMessage<InMsgType>>& incomingMsgs_;
-  std::queue<Message<OutMsgType>> outgoingMsgs_;
+  TSQueue<OwnedMessage<InMsgType>>& incomingMsgs_;
+  TSQueue<Message<OutMsgType>> outgoingMsgs_;
   Message<InMsgType> tempInMsg_;
 
 public:
   // A connection needs a context to work in, an incoming message queue and an owner.
   Connection(asio::io_context& ioContext,
-             std::queue<OwnedMessage<InMsgType>>& incomingMsgs, ConnectionOwner owner)
+             TSQueue<OwnedMessage<InMsgType>>& incomingMsgs, ConnectionOwner owner)
     : ioContext_(ioContext),
       socket_(ioContext),
       incomingMsgs_(incomingMsgs),

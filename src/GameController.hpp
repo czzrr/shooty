@@ -8,6 +8,7 @@
 #include "GameMessage.hpp"
 #include<iostream>
 #include <map>
+#include "TSQueue.hpp"
 
 // Key bindings.
 auto const keyUp = SDLK_w;
@@ -36,7 +37,7 @@ public:
 
   // Start the controller.
   void start() {
-    std::queue<OwnedMessage<GameMessage>>& incomingMsgs = client_.getIncomingMsgs();
+    TSQueue<OwnedMessage<GameMessage>>& incomingMsgs = client_.getIncomingMsgs();
     while (!quit_) {
         // Break out of loop if connection to server is lost.
       if (!client_.isConnected()) {
@@ -45,8 +46,8 @@ public:
         
       while (!incomingMsgs.empty()) {
             Game game;
-            incomingMsgs.front().msg.getData(game);
-            incomingMsgs.pop();
+            OwnedMessage<GameMessage> ownedMsg = incomingMsgs.pop();
+            ownedMsg.msg.getData(game);
             gameDrawer_.drawGame(game);
           }
         

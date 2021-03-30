@@ -5,6 +5,7 @@
 #include "Server.hpp"
 #include "Game.hpp"
 #include "GameMessage.hpp"
+#include "TSQueue.hpp"
 
 int main()
 {
@@ -16,7 +17,7 @@ int main()
   std::thread t([&]() { ioContext.run(); });
   
   //server.writeToAll(game);
-  std::queue<OwnedMessage<PlayerAction>>& incomingMsgs = server.getIncomingMsgs();
+  TSQueue<OwnedMessage<PlayerAction>>& incomingMsgs = server.getIncomingMsgs();
   int numPlayers = 0;
   while(true)
     {
