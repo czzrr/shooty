@@ -14,6 +14,7 @@
 bool isOutsideScreen(Bullet bullet);
 bool collides(Bullet b, Player p);
 
+// The Game class keeps track of the game state.
 class Game {
   std::map<uint32_t, Player> players_;
   std::map<uint32_t, std::chrono::time_point<std::chrono::system_clock>> lastBulletTimes_;
@@ -32,20 +33,15 @@ public:
     return players_.size();
   }
 
+  // Synchronize players with connections if either a player has disconnected
+  // or a player has connected. Dead players are handled in the advance() function.
   void syncPlayers(std::vector<uint32_t> ids) {
-    std::cout << "players: ";
-    for (auto& [id, _] : players_)
-      std::cout << id << " ";
-    std::cout << "\n";
-
-    std::cout << "connections: ";
-    for (auto id : ids)
-      std::cout << id << " ";
-    std::cout << "\n";
-    
+    // If player has connected
     if (players_.size() < ids.size()) {
-      addPlayer(ids[ids.size() - 1]);
+      addPlayer(ids[ids.size() - 1]); // Add a player with the connection's ID
+      // If player has disconnected
     } else if (players_.size() > ids.size()) {
+      // Remove players with no corresponding active connection
       for (auto& [id, _] : players_) {
         if (std::find(ids.begin(), ids.end(), id) == ids.end()) {
           removePlayer(id);
@@ -55,16 +51,14 @@ public:
     }
   }
 
-  
-  void addPlayer(int id) {
-    std::cout << "Adding player with ID " << id << "\n";
-    // Place player on random position (and grant him 3 seconds immunity?).
+  void addPlayer(uint32_t id) {
+    //std::cout << "Adding player with ID " << id << "\n";
     Player player(100, 100, id);
     players_.insert({id, player});
   }
 
-  void removePlayer(int id) {
-    std::cout << "Removing player with ID " << id << "\n";
+  void removePlayer(uint32_t id) {
+    //std::cout << "Removing player with ID " << id << "\n";
     auto found = players_.find(id);
     if (found != players_.end()) {
         players_.erase(found);
@@ -75,7 +69,8 @@ public:
     return players_;
   }
 
-  bool performAction(int id, PlayerAction playerAction) {
+  // Perform player action on player with matching ID
+  bool performAction(uint32_t id, PlayerAction playerAction) {
     auto found = players_.find(id);
     if (found != players_.end()) {
       Player& p = found->second;
@@ -98,15 +93,17 @@ public:
         
       case PlayerAction::FireBullet:
         {
+          // Find time when last bullet was fired
           auto foundTime = lastBulletTimes_.find(id);
-          if (foundTime != lastBulletTimes_.end()) {
+          if (foundTime != lastBulletTimes_.end()) { // If found
             auto start = foundTime->second;
             auto end = std::chrono::system_clock::now();
+            // Check if last bullet was fired at least 250 ms ago
             if (std::chrono::duration_cast<std::chrono::milliseconds>(end - start) >= std::chrono::milliseconds(250)) {
               lastBulletTimes_.insert_or_assign(id, end);
               p.fire();
             }
-          } else {
+          } else { // First bullet fired, add time to map
             lastBulletTimes_.insert({id, std::chrono::system_clock::now()});
             p.fire();
           }
@@ -128,6 +125,9 @@ public:
   
   // Advance to the next game state.
   std::vector<uint32_t> advance() {
+    // Check each player's bullets to see if they collide with another player.
+    // If so, remove both the bullet and the player hit.
+    // Move remaining bullets.
     std::vector<uint32_t> playersToDelete;
     for (auto& [_, player] : players_) {
       std::vector<Bullet>& bullets = player.getBullets();

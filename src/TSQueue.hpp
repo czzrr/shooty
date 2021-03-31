@@ -31,21 +31,9 @@ public:
     return data;
   }
   
-  T waitAndPop() {
-    std::unique_lock guard(mutex_);
-    cond_.wait(guard, [this]{ return !queue_.empty(); });
-    T data = queue_.front();
-    queue_.pop();
-    return data;
-  }
-
   bool empty() {
     std::scoped_lock guard(mutex_);
     return queue_.empty();
-  }
-
-  std::queue<T>& get() {
-    return queue_;
   }
     
 };
