@@ -28,7 +28,7 @@ INCLS := $(ASIO_INCL) $(SDL2_INCL)
 CPPFLAGS := -Iinclude $(INCLS) -pthread -std=c++17 -MMD -MP # -MMD and -MP generate dependencies
 
 # Linking options
-LDLIBS   := -lboost_serialization -lSDL2 -lpthread
+LDLIBS   := -lboost_serialization -lSDL2 -lSDL2_image -lpthread
 
 # Default targets when running make
 all: $(CLIENT_EXE) $(SERVER_EXE)

@@ -26,6 +26,7 @@ public:
   template<class Archive>
   void serialize(Archive& ar, const unsigned int version) {
     ar & pos_;
+    ar & angle_;
     ar & bullets_;
   }
   
@@ -69,9 +70,9 @@ public:
   }
 
   void fire() {
-    int dx = static_cast<int>(std::round(4 * cos(angle_ * DEG_TO_RAD)));
-    int dy = static_cast<int>(std::round(4 * sin(angle_ * DEG_TO_RAD)));
-    bullets_.push_back(Bullet(pos_.x, pos_.y, dx, dy));
+    std::cout << angle_ << "\n";
+
+    bullets_.push_back(Bullet(pos_.x, pos_.y, angle_));
 
   }
 
@@ -82,10 +83,15 @@ public:
   void rotateRight() {
     angle_ += dAngle_;
   }
-  
+
   std::vector<Bullet>& getBullets() {
     return bullets_;
   }
+
+  double getAngle() {
+    return angle_;
+  }
+  
 };
 
 
