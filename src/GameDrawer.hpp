@@ -45,9 +45,9 @@ public:
       SDL_RenderCopyEx(renderer_, spaceshipTexture_, NULL, &playerRect, player.getAngle(), NULL, SDL_FLIP_NONE);
       for (auto bullet : player.getBullets()) {
         Point bulletPos = bullet.getPos();
-        SDL_Rect bulletRect = { bulletPos.x, bulletPos.y, BULLET_SIDE, BULLET_SIDE };
+        SDL_Rect bulletRect = { bulletPos.x, bulletPos.y, 2 * BULLET_SIDE, BULLET_SIDE};
         //SDL_RenderFillRect(renderer_, &bulletRect);
-        std::cout << bullet.getAngle() << "\n";
+        //std::cout << bullet.getAngle() << "\n";
         SDL_RenderCopyEx(renderer_, bulletTexture_, NULL, &bulletRect, bullet.getAngle(), NULL, SDL_FLIP_NONE);
       }
     }
@@ -91,6 +91,7 @@ private:
     int imgFlags = IMG_INIT_PNG;
     if (!(IMG_Init(imgFlags) & imgFlags)) {
       std::cout << "SDL_image could not be initialized. SDL_image Error:: " << IMG_GetError() << "\n";
+      return;
     }
     isInitialized_ = true;
   }

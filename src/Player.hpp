@@ -70,10 +70,7 @@ public:
   }
 
   void fire() {
-    std::cout << angle_ << "\n";
-
     bullets_.push_back(Bullet(pos_.x, pos_.y, angle_));
-
   }
 
   void rotateLeft() {

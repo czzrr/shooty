@@ -34,8 +34,8 @@ public:
   Bullet(int x, int y, double angle) {
     angle_ = angle;
     pos_ = {x, y};
-    int dx = static_cast<int>(std::round(4 * cos(angle * DEG_TO_RAD)));
-    int dy = static_cast<int>(std::round(4 * sin(angle * DEG_TO_RAD)));
+    int dx = static_cast<int>(std::round(6 * cos(angle * DEG_TO_RAD)));
+    int dy = static_cast<int>(std::round(6 * sin(angle * DEG_TO_RAD)));
     vel_ = {dx, dy};
   }
 

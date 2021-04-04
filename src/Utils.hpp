@@ -7,7 +7,7 @@ const int SCREEN_WIDTH = 1000;
 const int SCREEN_HEIGHT = 1000;
 
 const int PLAYER_SIDE = 30;
-const int BULLET_SIDE = 40;
+const int BULLET_SIDE = 10;
 
 const int FRAMES_PER_SECOND = 60;
 

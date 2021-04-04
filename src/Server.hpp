@@ -71,7 +71,7 @@ public:
         connection->write(msg);
       }
       else  {
-        std::cout << "Connection with ID " << connection->getID() << "is invalid\n";
+        //std::cout << "Connection with ID " << connection->getID() << "is invalid\n";
         invalidClients = true;
         connection.reset(); // Release pointer's ownership of object pointed to (makes the pointer nullptr).
       }
@@ -80,7 +80,7 @@ public:
     // Remove disconnected clients, if any
     if (invalidClients) {
       connections_.erase(std::remove(connections_.begin(), connections_.end(),  nullptr), connections_.end());
-      std::cout << "new num connections: " << connections_.size() << "\n";
+      //std::cout << "new num connections: " << connections_.size() << "\n";
     }
     // The call to std::remove shifts all non-null connections to the beginning and returns an iterator
     // that is one past the end of these. std::erase then deletes the elements between this iterator

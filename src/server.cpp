@@ -29,7 +29,7 @@ int main()
       uint32_t id = ownedMessage.id;
       PlayerAction action = ownedMessage.msg.header.messageId;
       if (!game.performAction(id, action)) {
-        std::cout << "player " << id << " not found\n";
+        //std::cout << "player " << id << " not found\n";
         server.disconnect(id);
       }
     }

@@ -90,7 +90,7 @@ public:
       if (isDown) {
             Message<PlayerAction> msg;
             msg.header.messageId = keyCodeToPlayerAction(keyCode);
-            std::cout << playerActionToStr(keyCodeToPlayerAction(keyCode)) << "\n";
+            //std::cout << playerActionToStr(keyCodeToPlayerAction(keyCode)) << "\n";
             client_.send(msg);
           }
       }
